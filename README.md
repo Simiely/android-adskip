@@ -57,11 +57,11 @@
 
 进入「规则与同步设置」，底部「规则云同步」：
 
-1. **首次**输一个密码（自动加密存储，绝不存明文）
-2. **之后**输入同一密码才展开同步面板
-3. 填仓库 `owner / repo / branch / path`（如 `Simiely/adskip-rules/main/rules.json`）
-4. **下载**：不填 Token 也能用（公开仓库 raw 链接）→ 自动合并去重
-5. **上传**：需填写 [GitHub Fine-grained Token](https://github.com/settings/tokens)（仅授权目标仓库 `Contents: Read/Write`）
+1. 输入默认密码 **`12345678`** 解锁同步面板
+   - 密码经 SHA-256 哈希后 Keystore 加密存储，可在代码中修改默认值
+2. 填仓库 `owner / repo / branch / path`（如 `Simiely/adskip-rules/main/rules.json`）
+3. **下载**：不填 Token 也能用（公开仓库 raw 链接）→ 自动合并去重
+4. **上传**：需填写 [GitHub Fine-grained Token](https://github.com/settings/tokens)（仅授权目标仓库 `Contents: Read/Write`）
 
 > 🔐 Token 经 Android Keystore 加密存储，仅上传时经 HTTPS 发送。
 

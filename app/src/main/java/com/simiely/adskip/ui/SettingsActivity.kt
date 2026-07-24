@@ -55,10 +55,9 @@ class SettingsActivity : AppCompatActivity() {
             secure.setKeywordEnabled(checked)
         }
 
-        // 首次进入：设置密码；之后：校验密码解锁隐藏同步菜单
+        // 首次进入自动设置默认密码 12345678
         if (!secure.isPasswordSet()) {
-            binding.etPassword.setHint(R.string.hint_set_password)
-            binding.btnUnlock.setText("设置")
+            secure.setPasswordHash(SecurePrefs.hash("12345678"))
         }
         binding.btnUnlock.setOnClickListener { handleUnlock() }
 
@@ -79,12 +78,7 @@ class SettingsActivity : AppCompatActivity() {
         val pwd = binding.etPassword.text.toString()
         if (pwd.isEmpty()) return toast("请输入密码")
 
-        if (!secure.isPasswordSet()) {
-            secure.setPasswordHash(SecurePrefs.hash(pwd))
-            revealSyncPanel()
-            binding.etPassword.text.clear()
-            toast("已设置管理密码")
-        } else if (SecurePrefs.hash(pwd) == secure.getPasswordHash()) {
+        if (SecurePrefs.hash(pwd) == secure.getPasswordHash()) {
             revealSyncPanel()
             binding.etPassword.text.clear()
             toast(R.string.toast_unlocked)
