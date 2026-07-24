@@ -28,14 +28,17 @@ jobs:
       - name: Grant gradlew permission
         run: chmod +x gradlew
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug
+      - name: Unlock keystore
+        run: unzip -P "${{ secrets.ZIP_PASSWORD }}" adskip-keystore.zip
+
+      - name: Build Release APK
+        run: ./gradlew assembleRelease -PKEYSTORE_FILE=adskip.jks -PKEYSTORE_PASSWORD="${{ secrets.KEYSTORE_PASSWORD }}" -PKEY_ALIAS="${{ secrets.KEY_ALIAS }}"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: app-release
+          path: app/build/outputs/apk/release/app-release.apk
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -45,27 +48,30 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: app-debug
+          name: app-release
+
+      - name: Rename for release
+        run: mv app-release.apk AdSkip-v${{ github.ref_name }}.apk
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: app-debug.apk
+          files: AdSkip-v${{ github.ref_name }}.apk
           name: ${{ github.ref_name }}
           body: |
             ## AdSkip ${{ github.ref_name }}
-            
-            基于无障碍服务的 Android 跳过广告工具。
-            
-            ### 首次使用
-            1. 安装 APK
-            2. 设置 → 无障碍 → 开启 AdSkip
-            3. 授予悬浮窗权限（HyperOS 还需开「后台弹出界面」）
-            4. 电池设无限制 + 自启动 + 任务栏锁定
-            
+
+            🔑 隐藏菜单默认密码：**12345678**
+
             ### 功能
-            - 关键词匹配（可关闭以省电）
-            - 悬浮胶囊手动捕获按钮
-            - 规则 GitHub 云同步（设置页密码门）
-            - 全局总开关
+            - 内置关键词 + 悬浮胶囊手动捕获
+            - 关键词开关（关掉省电）
+            - 全局总开关 / 规则云同步 / 前台保活
+            - 固定签名（Release APK 可覆盖安装）
+
+            ### 首次使用
+            1. 装 APK → 开启无障碍 → 开悬浮窗 → 电池无限制
+            2. 设置页底部输入 **12345678** 解锁隐藏菜单
+
+            https://github.com/Simiely/android-adskip
           token: ${{ secrets.GITHUB_TOKEN }}

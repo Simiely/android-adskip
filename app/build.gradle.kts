@@ -25,6 +25,20 @@ android {
         }
     }
 
+    // 签名：仅当 CI 传入 KEYSTORE_FILE 属性时启用（本地调试仍用 debug 签名）
+    val ks = project.findProperty("KEYSTORE_FILE") as? String
+    if (!ks.isNullOrEmpty()) {
+        signingConfigs {
+            create("release") {
+                storeFile = rootProject.file(ks)
+                storePassword = project.findProperty("KEYSTORE_PASSWORD") as? String ?: ""
+                keyAlias = project.findProperty("KEY_ALIAS") as? String ?: "adskip"
+                keyPassword = project.findProperty("KEYSTORE_PASSWORD") as? String ?: ""
+            }
+        }
+        buildTypes.getByName("release").signingConfig = signingConfigs.getByName("release")
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -43,8 +57,6 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.12.0")
-    // 加密存储 Token / 密码哈希（Android Keystore 支撑）
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
-    // 协程：网络请求放到 IO 线程
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 }

@@ -11,5 +11,6 @@
 *.aab
 *.jks
 *.keystore
+!adskip-keystore.zip
 /app/build
 /app/release
