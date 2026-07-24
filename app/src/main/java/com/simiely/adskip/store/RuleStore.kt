@@ -29,7 +29,7 @@ class RuleStore(context: Context) {
         return DEFAULT_KEYWORDS + user
     }
 
-    fun getUserKeywords(): Set<String> {
+    fun getUserKeywords(): MutableSet<String> {
         return LinkedHashSet(prefs.getStringSet(KEY_USER_KEYWORDS, emptySet()) ?: emptySet())
     }
 
