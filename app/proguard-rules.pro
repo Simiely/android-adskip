@@ -19,6 +19,10 @@
 -dontwarn androidx.security.**
 -keep class androidx.security.crypto.** { *; }
 
+# ── tink / security-crypto 引用了 javax.annotation（Android 不存在） ──
+-dontwarn javax.annotation.**
+-dontwarn com.google.crypto.tink.**
+
 # ── ViewBinding 生成的类（反射创建） ──
 -keep class com.simely.adskip.databinding.** { *; }
 
