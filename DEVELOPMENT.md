@@ -82,6 +82,28 @@
 
 ## 三、无障碍服务
 
+### 3.0 ❌ 检测无障碍状态用了 manifest 短格式类名 → 永远返回"未开启"
+
+**现象**：用户已在系统设置中开启无障碍服务，但 App 一直提示"未开启"。
+
+**根因**：`Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES` 存储的组件名是 **完整类名**：
+```
+com.simely.adskip/com.simely.adskip.service.AdSkipAccessibilityService
+```
+但检测代码用了 manifest 的 `.` 短格式：
+```kotlin
+services.contains("com.simely.adskip/.service.AdSkipAccessibilityService")  // ❌ 永远匹配不上
+```
+`.service` 是 `AndroidManifest.xml` 中的包内缩写，只在构建时由 AAPT 展开。系统运行时存储的始终是完整限定的类名。
+
+**修复**：改为完整类名：
+```kotlin
+services.contains("com.simely.adskip/com.simely.adskip.service.AdSkipAccessibilityService")
+```
+
+**影响范围**：`MainActivity.isAccessibilityEnabled()` 和 `BootReceiver.isAccessibilityEnabled()` 两处。
+
+
 ### 3.1 ❌ `android:packageNames="@null"` 导致服务可能不监听任何应用
 
 **现象**：代码审计时发现。
