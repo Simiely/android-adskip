@@ -1,0 +1,70 @@
+name: Build & Release APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 34
+          build-tools: 34.0.0
+
+      - name: Grant gradlew permission
+        run: chmod +x gradlew
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-debug
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: app-debug.apk
+          name: ${{ github.ref_name }}
+          body: |
+            ## AdSkip ${{ github.ref_name }}
+            
+            基于无障碍服务的 Android 跳过广告工具。
+            
+            ### 首次使用
+            1. 安装 APK
+            2. 设置 → 无障碍 → 开启 AdSkip
+            3. 授予悬浮窗权限（HyperOS 还需开「后台弹出界面」）
+            4. 电池设无限制 + 自启动 + 任务栏锁定
+            
+            ### 功能
+            - 关键词匹配（可关闭以省电）
+            - 悬浮胶囊手动捕获按钮
+            - 规则 GitHub 云同步（设置页密码门）
+            - 全局总开关
+          token: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,48 @@
+<resources>
+    <string name="app_name">AdSkip</string>
+    <string name="title_main">AdSkip 跳过广告</string>
+    <string name="title_settings">规则与同步</string>
+
+    <string name="accessibility_desc">AdSkip 通过无障碍服务监听界面变化，自动点击「跳过/关闭广告」类按钮，并支持手动捕获按钮。需在系统中开启本服务后方可工作。</string>
+
+    <!-- 主界面 -->
+    <string name="hint_accessibility_off">无障碍服务未开启</string>
+    <string name="hint_overlay_off">悬浮窗权限未开启</string>
+    <string name="btn_open_accessibility">开启无障碍服务</string>
+    <string name="btn_open_overlay">开启悬浮窗权限</string>
+    <string name="btn_open_battery">电池无限制 / 自启动白名单</string>
+    <string name="btn_open_settings">规则与同步设置</string>
+    <string name="status_running">运行中：监听界面并自动跳过</string>
+    <string name="status_stopped">未运行：请先开启无障碍服务</string>
+
+    <!-- 设置 -->
+    <string name="section_keywords">关键词（自动匹配）</string>
+    <string name="switch_master">总开关（关闭后停止自动跳过）</string>
+    <string name="switch_keyword">关键词匹配：自动识别「跳过/关闭广告」等文字</string>
+    <string name="hint_keyword_on">开启后覆盖更广、但每次界面变化会遍历节点树；关闭后只用你手动捕获的规则，最省电</string>
+    <string name="section_rules">手动捕获规则</string>
+    <string name="hint_add_keyword">输入要匹配的文字，如 跳过</string>
+    <string name="btn_add">添加</string>
+    <string name="btn_add_rule_hint">在悬浮胶囊上点一下进入捕获模式，再去点要跳过的按钮</string>
+    <string name="empty_rules">暂无手动规则</string>
+
+    <!-- 隐藏同步菜单（密码门） -->
+    <string name="sync_title">规则云同步（隐藏）</string>
+    <string name="hint_password">输入管理密码</string>
+    <string name="hint_set_password">首次使用：设置管理密码</string>
+    <string name="btn_unlock">解锁</string>
+    <string name="hint_repo_owner">仓库所有者 (owner)</string>
+    <string name="hint_repo_name">仓库名 (repo)</string>
+    <string name="hint_repo_branch">分支 (branch)</string>
+    <string name="hint_repo_path">文件路径 (如 rules.json)</string>
+    <string name="hint_token">GitHub Token（留空则只能下载）</string>
+    <string name="btn_download">下载并合并</string>
+    <string name="btn_upload">上传全部规则</string>
+    <string name="toast_unlocked">已解锁同步菜单</string>
+    <string name="toast_wrong_password">密码错误</string>
+    <string name="toast_captured">已捕获按钮，可在规则列表查看</string>
+    <string name="toast_download_ok">下载完成，已合并到本地</string>
+    <string name="toast_upload_ok">上传成功</string>
+    <string name="toast_sync_fail">同步失败：%1$s</string>
+    <string name="hint_no_token_upload">未填写 Token，仅可下载</string>
+</resources>

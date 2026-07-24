@@ -1,0 +1,13 @@
+<resources>
+    <!-- 哔哩哔哩粉，作为主题强调色 -->
+    <color name="pink">#FB7299</color>
+    <color name="pink_dark">#C8548A</color>
+    <color name="pink_light">#FFD6E4</color>
+    <color name="bg">#FFF7FA</color>
+    <color name="surface">#xFFFFFFFF</color>
+    <color name="text_primary">#222222</color>
+    <color name="text_secondary">#777777</color>
+
+    <!-- 图标背景 -->
+    <color name="ic_launcher_background">#FB7299</color>
+</resources>

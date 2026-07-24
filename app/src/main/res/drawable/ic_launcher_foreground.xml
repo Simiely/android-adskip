@@ -1,0 +1,15 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 简单“跳过”箭头标记 -->
+    <group android:translateX="34" android:translateY="34">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M14,4 L40,20 L14,36 L14,28 L4,28 L4,12 L14,12 Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M44,14 L52,14 L52,34 L44,34 Z" />
+    </group>
+</vector>

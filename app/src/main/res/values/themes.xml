@@ -1,0 +1,10 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Theme.AdSkip" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/pink</item>
+        <item name="colorPrimaryDark">@color/pink_dark</item>
+        <item name="colorAccent">@color/pink</item>
+        <item name="android:colorBackground">@color/bg</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="android:statusBarColor">?attr/colorPrimary</item>
+    </style>
+</resources>
