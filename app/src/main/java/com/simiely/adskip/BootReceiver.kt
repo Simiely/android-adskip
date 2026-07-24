@@ -25,6 +25,6 @@ class BootReceiver : BroadcastReceiver() {
             context.contentResolver,
             Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
         ) ?: return false
-        return services.contains("com.simely.adskip/.service.AdSkipAccessibilityService")
+        return services.contains("com.simely.adskip/com.simely.adskip.service.AdSkipAccessibilityService")
     }
 }

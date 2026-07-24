@@ -63,6 +63,7 @@ class MainActivity : AppCompatActivity() {
         val services = Settings.Secure.getString(
             contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
         ) ?: return false
-        return services.contains("com.simely.adskip/.service.AdSkipAccessibilityService")
+        // Android 存储的是完整类名，不是 manifest 里的 .service 短格式
+        return services.contains("com.simely.adskip/com.simely.adskip.service.AdSkipAccessibilityService")
     }
 }
