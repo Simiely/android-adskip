@@ -4,7 +4,7 @@
     <color name="pink_dark">#C8548A</color>
     <color name="pink_light">#FFD6E4</color>
     <color name="bg">#FFF7FA</color>
-    <color name="surface">#xFFFFFFFF</color>
+    <color name="surface">#FFFFFFFF</color>
     <color name="text_primary">#222222</color>
     <color name="text_secondary">#777777</color>
 
