@@ -6,4 +6,4 @@
     android:canRetrieveWindowContent="true"
     android:description="@string/accessibility_desc"
     android:notificationTimeout="0"
-    android:settingsActivity="com.simely.adskip/.ui.SettingsActivity" />
+    android:settingsActivity="com.simely.adskip/com.simely.adskip.ui.SettingsActivity" />
