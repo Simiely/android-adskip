@@ -21,5 +21,5 @@ object AccessibilityUtil {
     }
 
     private const val SERVICE_FULL_NAME =
-        "com.simiely.adskip/com.simiely.adskip.service.AdSkipAccessibilityService"
+        "com.simely.adskip/com.simely.adskip.service.AdSkipAccessibilityService"
 }
