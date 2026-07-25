@@ -2,8 +2,6 @@ package com.simely.adskip.float
 
 import android.content.Context
 import android.graphics.PixelFormat
-import android.os.Handler
-import android.os.Looper
 import android.provider.Settings
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -18,9 +16,9 @@ import com.simely.adskip.R
 /**
  * 悬浮胶囊管理：
  * - 常驻 TYPE_APPLICATION_OVERLAY 小圆点
- * - 点击胶囊 → 进入"手动捕获模式"（隐藏胶囊，显示半透明提示遮罩）
- * - 点击遮罩取消捕获；捕获模式下真实点击由无障碍服务捕获
- * - 修复：捕获期间隐藏胶囊，避免胶囊拦截用户对目标按钮的触摸
+ * - 点击 → 进入捕获模式（胶囊变为 FLAG_NOT_TOUCH_MODAL，外部触摸穿透到 App）
+ * - 捕获模式下点胶囊 → 取消捕获
+ * - 长按 → 隐藏胶囊
  */
 class FloatWindowManager(private val context: Context) {
 
@@ -28,6 +26,7 @@ class FloatWindowManager(private val context: Context) {
     private var capsuleView: View? = null
     private var hintView: View? = null
 
+    /** 普通模式：不可获焦（触摸由 onTouchListener 处理） */
     private val capsuleParams = WindowManager.LayoutParams(
         WindowManager.LayoutParams.WRAP_CONTENT,
         WindowManager.LayoutParams.WRAP_CONTENT,
@@ -40,7 +39,7 @@ class FloatWindowManager(private val context: Context) {
         y = 200
     }
 
-    /** 捕获提示遮罩：穿透触摸（用户点击直达下方 App 按钮），取消靠超时 */
+    /** 捕获提示遮罩：穿透触摸（用户点击直达下方 App 按钮） */
     private val hintParams = WindowManager.LayoutParams(
         WindowManager.LayoutParams.MATCH_PARENT,
         WindowManager.LayoutParams.MATCH_PARENT,
@@ -54,10 +53,7 @@ class FloatWindowManager(private val context: Context) {
     private var downTime = 0L
     private var moved = false
     private var longPressed = false
-    private var captureTimeout: Handler? = null
-    private val captureTimeoutMs = 15_000L
     private var warnedNoOverlay = false
-    /** 胶囊隐藏后回调，通知 KeepAliveService 更新通知栏 */
     var onVisibilityChanged: ((Boolean) -> Unit)? = null
 
     fun canShow(): Boolean = Settings.canDrawOverlays(context)
@@ -101,9 +97,8 @@ class FloatWindowManager(private val context: Context) {
                 downTime = System.currentTimeMillis()
                 moved = false
                 longPressed = false
-                // 500ms 后检测长按
                 v.postDelayed({
-                    if (!moved && capsuleView != null) {
+                    if (!moved && capsuleView != null && !AppState.isCapturing) {
                         longPressed = true
                         hideCapsuleAndNotify()
                     }
@@ -147,18 +142,20 @@ class FloatWindowManager(private val context: Context) {
             onCancelled = { exitCaptureMode() }
         )
 
-        // 关键修复：隐藏胶囊，让触摸穿透到目标 App 的按钮
-        capsuleView?.let { wm.removeView(it) }
-        capsuleView = null
+        // 关键：切换为 FLAG_NOT_TOUCH_MODAL，胶囊内触摸由胶囊处理，胶囊外穿透到 App
+        capsuleView?.let { v ->
+            capsuleParams.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+            wm.updateViewLayout(v, capsuleParams)
+            // 视觉提示：捕获模式 — 胶囊变红
+            v.findViewById<View>(R.id.capsule)?.let {
+                it.setBackgroundResource(R.drawable.bg_capsule_capture)
+            }
+        }
 
         if (hintView == null) {
             hintView = LayoutInflater.from(context).inflate(R.layout.capture_hint, null)
             wm.addView(hintView, hintParams)
-        }
-
-        // 超时自动取消
-        captureTimeout = Handler(Looper.getMainLooper()).apply {
-            postDelayed({ cancelCapture() }, captureTimeoutMs)
         }
     }
 
@@ -168,10 +165,15 @@ class FloatWindowManager(private val context: Context) {
     }
 
     private fun exitCaptureMode() {
-        captureTimeout?.removeCallbacksAndMessages(null)
-        captureTimeout = null
+        // 恢复胶囊正常标志和外观
+        capsuleView?.let { v ->
+            capsuleParams.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+            wm.updateViewLayout(v, capsuleParams)
+            v.findViewById<View>(R.id.capsule)?.let {
+                it.setBackgroundResource(R.drawable.bg_capsule)
+            }
+        }
         hideHint()
-        showCapsule()
     }
 
     private fun hideHint() {
