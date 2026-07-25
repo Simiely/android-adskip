@@ -51,12 +51,18 @@ class FloatWindowManager(private val context: Context) {
 
     private var downX = 0f
     private var downY = 0f
+    private var downTime = 0L
     private var moved = false
+    private var longPressed = false
     private var captureTimeout: Handler? = null
     private val captureTimeoutMs = 15_000L
     private var warnedNoOverlay = false
+    /** 胶囊隐藏后回调，通知 KeepAliveService 更新通知栏 */
+    var onVisibilityChanged: ((Boolean) -> Unit)? = null
 
     fun canShow(): Boolean = Settings.canDrawOverlays(context)
+
+    fun isVisible(): Boolean = capsuleView != null
 
     fun showCapsule() {
         if (!canShow()) {
@@ -72,6 +78,13 @@ class FloatWindowManager(private val context: Context) {
         view.setOnTouchListener(::onCapsuleTouch)
         capsuleView = view
         wm.addView(view, capsuleParams)
+        onVisibilityChanged?.invoke(true)
+    }
+
+    fun hideCapsuleAndNotify() {
+        hideCapsule()
+        onVisibilityChanged?.invoke(false)
+        Toast.makeText(context, "悬浮窗已隐藏，点击通知栏可重新显示", Toast.LENGTH_SHORT).show()
     }
 
     fun hideCapsule() {
@@ -85,20 +98,33 @@ class FloatWindowManager(private val context: Context) {
             MotionEvent.ACTION_DOWN -> {
                 downX = event.rawX
                 downY = event.rawY
+                downTime = System.currentTimeMillis()
                 moved = false
+                longPressed = false
+                // 500ms 后检测长按
+                v.postDelayed({
+                    if (!moved && capsuleView != null) {
+                        longPressed = true
+                        hideCapsuleAndNotify()
+                    }
+                }, 500L)
+                return true
             }
             MotionEvent.ACTION_MOVE -> {
                 val dx = event.rawX - downX
                 val dy = event.rawY - downY
                 if (abs(dx) > 8 || abs(dy) > 8) moved = true
-                capsuleParams.x = (capsuleParams.x + dx.toInt()).coerceAtLeast(0)
-                capsuleParams.y = (capsuleParams.y + dy.toInt()).coerceAtLeast(0)
-                downX = event.rawX
-                downY = event.rawY
-                wm.updateViewLayout(v, capsuleParams)
+                if (moved && !longPressed) {
+                    capsuleParams.x = (capsuleParams.x + dx.toInt()).coerceAtLeast(0)
+                    capsuleParams.y = (capsuleParams.y + dy.toInt()).coerceAtLeast(0)
+                    downX = event.rawX
+                    downY = event.rawY
+                    wm.updateViewLayout(v, capsuleParams)
+                }
             }
-            MotionEvent.ACTION_UP -> {
-                if (!moved) onCapsuleTap()
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                v.removeCallbacks(null)
+                if (!moved && !longPressed) onCapsuleTap()
             }
         }
         return true
