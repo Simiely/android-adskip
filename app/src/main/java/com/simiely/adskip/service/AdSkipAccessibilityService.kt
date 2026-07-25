@@ -45,8 +45,7 @@ class AdSkipAccessibilityService : AccessibilityService() {
             secure = SecurePrefs(this)
             logi { "Service created, rules loaded" }
         } catch (e: Exception) {
-            loge { "Failed to init store/prefs" }
-            Log.e(TAG, "Init error", e)
+            loge({ "Failed to init store/prefs" }, e)
         }
     }
 
