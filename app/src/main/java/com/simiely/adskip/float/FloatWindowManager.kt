@@ -48,9 +48,7 @@ class FloatWindowManager(private val context: Context) {
 
     private var downX = 0f
     private var downY = 0f
-    private var downTime = 0L
     private var moved = false
-    private var longPressed = false
     private var warnedNoOverlay = false
     var onVisibilityChanged: ((Boolean) -> Unit)? = null
     /** 捕获状态变化回调（用于 KeepAliveService 更新通知栏） */
@@ -95,13 +93,6 @@ class FloatWindowManager(private val context: Context) {
                 downY = event.rawY
                 downTime = System.currentTimeMillis()
                 moved = false
-                longPressed = false
-                v.postDelayed({
-                    if (!moved && capsuleView != null && !AppState.isCapturing) {
-                        longPressed = true
-                        hideCapsuleAndNotify()
-                    }
-                }, 500L)
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
@@ -117,8 +108,7 @@ class FloatWindowManager(private val context: Context) {
                 }
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                v.removeCallbacks(null)
-                if (!moved && !longPressed) onCapsuleTap()
+                if (!moved) onCapsuleTap()
             }
         }
         return true

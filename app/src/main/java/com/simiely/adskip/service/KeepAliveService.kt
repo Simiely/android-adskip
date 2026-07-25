@@ -74,11 +74,7 @@ class KeepAliveService : Service() {
         val capturing = com.simely.adskip.AppState.isCapturing
 
         val title = "AdSkip 运行中"
-        val text = when {
-            capturing -> "捕获模式中，请点击目标按钮；通知栏可取消"
-            visible -> "悬浮窗已显示，长按可隐藏"
-            else -> "悬浮窗已隐藏"
-        }
+        val text = if (capturing) "捕获模式中，点悬浮球可取消" else "监听界面并自动跳过广告"
 
         val mainIntent = Intent(this, MainActivity::class.java)
         val mainPi = PendingIntent.getActivity(
@@ -103,15 +99,6 @@ class KeepAliveService : Service() {
                         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
                     )
                     addAction(0, "取消捕获", cancelPi)
-                } else if (!visible) {
-                    val showIntent = Intent(this@KeepAliveService, KeepAliveService::class.java).apply {
-                        action = ACTION_SHOW_CAPSULE
-                    }
-                    val showPi = PendingIntent.getService(
-                        this@KeepAliveService, 1, showIntent,
-                        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-                    )
-                    addAction(0, "显示悬浮窗", showPi)
                 }
             }
             .build()
