@@ -1,39 +1,43 @@
-# ── 无障碍服务（系统通过 intent filter 绑定，R8 需要显式 keep） ──
+# ── 保留所有 AdSkip 代码（避免 R8 误删） ──
+-keep class com.simely.adskip.** { *; }
+
+# ── 无障碍服务 ──
 -keep public class * extends android.accessibilityservice.AccessibilityService {
     public <methods>;
 }
 
-# ── 前台保活服务 ──
--keep class com.simely.adskip.service.KeepAliveService { *; }
-
-# ── 开机广播接收器 ──
--keep class com.simely.adskip.BootReceiver { *; }
-
-# ── 数据模型（org.json 手动反序列化，字段名不能被混淆） ──
--keep class com.simely.adskip.model.** { *; }
-
-# ── 跨组件共享状态单例 ──
--keep class com.simely.adskip.AppState { *; }
+# ── 数据模型字段名不被混淆 ──
+-keepclassmembers class com.simely.adskip.model.** { <fields>; }
 
 # ── EncryptedSharedPreferences ──
 -dontwarn androidx.security.**
 -keep class androidx.security.crypto.** { *; }
 
-# ── tink / security-crypto 引用了 javax.annotation（Android 不存在） ──
+# ── tink ──
 -dontwarn javax.annotation.**
 -dontwarn com.google.crypto.tink.**
 
-# ── 自定义 View（layout XML 引用，类名不能被混淆） ──
--keep class com.simely.adskip.ui.ChartView { *; }
+# ── 枚举（R8 会默认优化掉 values/valueOf） ──
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}
 
-# ── ViewBinding 生成的类（反射创建） ──
--keep class com.simely.adskip.databinding.** { *; }
+# ── Parcelable ──
+-keepclassmembers class * implements android.os.Parcelable {
+    public static final android.os.Parcelable$Creator *;
+}
 
-# ── MainActivity & 统计相关类 ──
--keep class com.simely.adskip.ui.MainActivity { *; }
--keep class com.simely.adskip.store.StatsStore { *; }
+# ── Material Components ──
+-keep class com.google.android.material.** { *; }
+-dontwarn com.google.android.material.**
+
+# ── AndroidX ──
+-keep class androidx.appcompat.widget.** { *; }
+-keep class androidx.core.** { *; }
 
 # ── 标准 ProGuard ──
 -keepattributes Signature
 -keepattributes *Annotation*
 -keepattributes SourceFile,LineNumberTable
+-keepattributes InnerClasses
