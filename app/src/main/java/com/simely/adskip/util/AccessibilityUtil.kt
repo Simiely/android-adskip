@@ -1,25 +1,24 @@
 package com.simely.adskip.util
 
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Context
-import android.provider.Settings
+import android.view.accessibility.AccessibilityManager
+import com.simely.adskip.service.AdSkipAccessibilityService
 
 /**
- * 无障碍服务检测工具，避免 MainActivity / BootReceiver 中重复代码。
+ * 无障碍服务检测工具。
+ * 使用 AccessibilityManager.getEnabledAccessibilityServiceList() 而非 Settings.Secure，
+ * 因为后者在 MIUI/HyperOS 上不可靠。
  */
 object AccessibilityUtil {
 
-    /**
-     * 检测 AdSkip 无障碍服务是否已在系统设置中开启。
-     * 注意：系统存储的是完整类名，不能用 manifest 短格式。
-     */
     fun isEnabled(context: Context): Boolean {
-        val services = Settings.Secure.getString(
-            context.contentResolver,
-            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-        ) ?: return false
-        return services.contains(SERVICE_FULL_NAME)
+        val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
+        val list = am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
+        val targetName = AdSkipAccessibilityService::class.java.name
+        return list.any { info ->
+            info.resolveInfo.serviceInfo.packageName == context.packageName &&
+                    info.resolveInfo.serviceInfo.name == targetName
+        }
     }
-
-    private const val SERVICE_FULL_NAME =
-        "com.simely.adskip/com.simely.adskip.service.AdSkipAccessibilityService"
 }
