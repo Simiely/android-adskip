@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.provider.Settings
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import com.simely.adskip.R
 import com.simely.adskip.databinding.ActivityMainBinding
 import com.simely.adskip.store.StatsStore
@@ -39,7 +38,6 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
 
-        refreshStats()
         showDisabledRuleNotice()
     }
 
@@ -48,19 +46,12 @@ class MainActivity : AppCompatActivity() {
         val accOn = isAccessibilityEnabled()
         val overlayOn = Settings.canDrawOverlays(this)
         binding.tvStatus.text = if (accOn && overlayOn) getString(R.string.status_running) else getString(R.string.status_stopped)
-        refreshStats()
     }
 
     private fun isAccessibilityEnabled(): Boolean {
         val service = "$packageName/com.simely.adskip.service.AdSkipAccessibilityService"
         val enabled = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
         return enabled?.contains(service) == true
-    }
-
-    private fun refreshStats() {
-        binding.tvTotalCount.text = "${stats.getTotalCount()}"
-        binding.tvTodayCount.text = "${stats.getTodayCount()}"
-        binding.tvUsageDays.text = "${stats.getUsageDays()}"
     }
 
     private fun showDisabledRuleNotice() {
