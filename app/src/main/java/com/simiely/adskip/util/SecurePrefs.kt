@@ -38,7 +38,6 @@ class SecurePrefs(context: Context) {
     /** 关键词开关：关闭后仅用手动捕获规则（更省电） */
     fun getKeywordEnabled(): Boolean = prefs.getBoolean(KEY_KEYWORD, true)
     fun setKeywordEnabled(v: Boolean) = prefs.edit().putBoolean(KEY_KEYWORD, v).apply()
-    fun setPasswordHash(hash: String) = prefs.edit().putString(KEY_PWD_HASH, hash).apply()
 
     fun getRepoOwner(): String = prefs.getString(KEY_OWNER, "") ?: ""
     fun setRepoOwner(v: String) = prefs.edit().putString(KEY_OWNER, v.trim()).apply()

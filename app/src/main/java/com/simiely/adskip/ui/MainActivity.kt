@@ -81,7 +81,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupCollapsible(header: View, panel: View, key: String) {
+    private fun setupCollapsible(headerView: View, panel: View, key: String) {
+        val header = headerView as android.widget.TextView
         val prefs = getSharedPreferences("main_ui", MODE_PRIVATE)
         val expanded = prefs.getBoolean(key, true) // 默认展开
 
