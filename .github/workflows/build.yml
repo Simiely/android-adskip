@@ -31,14 +31,14 @@ jobs:
       - name: Unlock keystore
         run: unzip -P "${{ secrets.ZIP_PASSWORD }}" adskip-keystore.zip
 
-      - name: Build Release APK
+      - name: Build Debug APK
         run: ./gradlew assembleDebug -PKEYSTORE_FILE=adskip.jks -PKEYSTORE_PASSWORD="${{ secrets.KEYSTORE_PASSWORD }}" -PKEY_ALIAS="${{ secrets.KEY_ALIAS }}"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-release
-          path: app/build/outputs/apk/release/app-debug.apk
+          name: app-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -48,7 +48,7 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: app-release
+          name: app-debug
 
       - name: Rename for release
         run: mv app-debug.apk AdSkip-v${{ github.ref_name }}.apk
@@ -57,21 +57,4 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: AdSkip-v${{ github.ref_name }}.apk
-          name: ${{ github.ref_name }}
-          body: |
-            ## AdSkip ${{ github.ref_name }}
-
-            🔑 隐藏菜单默认密码：**12345678**
-
-            ### 功能
-            - 内置关键词 + 悬浮胶囊手动捕获
-            - 关键词开关（关掉省电）
-            - 全局总开关 / 规则云同步 / 前台保活
-            - 固定签名（Release APK 可覆盖安装）
-
-            ### 首次使用
-            1. 装 APK → 开启无障碍 → 开悬浮窗 → 电池无限制
-            2. 设置页底部输入 **12345678** 解锁隐藏菜单
-
-            https://github.com/Simiely/android-adskip
           token: ${{ secrets.GITHUB_TOKEN }}
