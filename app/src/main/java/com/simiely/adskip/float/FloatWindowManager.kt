@@ -91,7 +91,6 @@ class FloatWindowManager(private val context: Context) {
             MotionEvent.ACTION_DOWN -> {
                 downX = event.rawX
                 downY = event.rawY
-                downTime = System.currentTimeMillis()
                 moved = false
                 return true
             }
@@ -99,7 +98,7 @@ class FloatWindowManager(private val context: Context) {
                 val dx = event.rawX - downX
                 val dy = event.rawY - downY
                 if (abs(dx) > 8 || abs(dy) > 8) moved = true
-                if (moved && !longPressed) {
+                if (moved) {
                     capsuleParams.x = (capsuleParams.x + dx.toInt()).coerceAtLeast(0)
                     capsuleParams.y = (capsuleParams.y + dy.toInt()).coerceAtLeast(0)
                     downX = event.rawX
