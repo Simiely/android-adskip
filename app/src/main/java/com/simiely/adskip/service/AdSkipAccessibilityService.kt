@@ -1,13 +1,15 @@
 package com.simely.adskip.service
 
 import android.accessibilityservice.AccessibilityService
-import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import com.simely.adskip.AppState
 import com.simely.adskip.model.Rule
 import com.simely.adskip.store.RuleStore
 import com.simely.adskip.util.SecurePrefs
+import com.simely.adskip.util.logd
+import com.simely.adskip.util.loge
+import com.simely.adskip.util.logi
 
 /**
  * 核心无障碍服务：事件驱动，零轮询。
@@ -20,17 +22,31 @@ class AdSkipAccessibilityService : AccessibilityService() {
 
     private var ruleStore: RuleStore? = null
     private var secure: SecurePrefs? = null
-    private val lastClick = mutableMapOf<String, Long>()
-    private val COOLDOWN_MS = 800L
+    /** 冷却 Map：最多保留 100 条，超过后清理过期条目后再插入 */
+    private val lastClick = object : LinkedHashMap<String, Long>(100, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Long>?): Boolean {
+            if (size <= MAX_COOLDOWN_ENTRIES) return false
+            // 如果最老的条目已过期（超过 COOLDOWN_MS * 10），移除它
+            val expired = eldest != null &&
+                    System.currentTimeMillis() - eldest.value > COOLDOWN_MS * 10
+            if (!expired) {
+                // 被动清理所有过期条目
+                val now = System.currentTimeMillis()
+                entries.removeAll { now - it.value > COOLDOWN_MS * 10 }
+            }
+            return expired
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
         try {
             ruleStore = RuleStore(this)
             secure = SecurePrefs(this)
+            logi { "Service created, rules loaded" }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to init store/prefs", e)
-            // 降级运行：不崩溃，但不执行匹配（等待用户重启服务）
+            loge { "Failed to init store/prefs" }
+            Log.e(TAG, "Init error", e)
         }
     }
 
@@ -42,8 +58,9 @@ class AdSkipAccessibilityService : AccessibilityService() {
         try {
             if (AppState.isCapturing && event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED) {
                 captureNode(event)
+                val callback = AppState.onCaptured
                 AppState.exitCapture()
-                AppState.onCaptured?.invoke()
+                callback?.invoke()
                 return
             }
             if (AppState.isCapturing) return
@@ -144,5 +161,7 @@ class AdSkipAccessibilityService : AccessibilityService() {
 
     companion object {
         private const val TAG = "AdSkipService"
+        private const val COOLDOWN_MS = 800L
+        private const val MAX_COOLDOWN_ENTRIES = 100
     }
 }

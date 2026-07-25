@@ -24,7 +24,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="捕获后自动退出；再点一次悬浮胶囊可取消"
+            android:text="点击目标按钮自动捕获；15 秒无操作自动取消"
             android:textColor="#FFFFFF"
             android:textSize="14sp" />
     </LinearLayout>

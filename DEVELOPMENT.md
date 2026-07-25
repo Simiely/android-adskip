@@ -143,7 +143,27 @@ services.contains("com.simely.adskip/com.simely.adskip.service.AdSkipAccessibili
 **修复**：key 加上 `pkg` 前缀：`"$pkg|${clickable.viewIdResourceName ?: clickable.text}"`。
 
 
-## 四、前台服务与 Android 版本兼容
+### 3.5 ❌ 捕获模式永远无法捕获 —— 悬浮胶囊拦截了触摸
+
+**现象**：点悬浮胶囊进入捕获模式后，再去点击 App 的「跳过」按钮，捕获直接取消，从未记录规则。
+
+**根因**：悬浮胶囊是 `TYPE_APPLICATION_OVERLAY`，永远浮在顶层。用户点击目标按钮时，触摸先被胶囊的 `onCapsuleTouch` 拦截（始终 `return true`）。胶囊判定为点击 → `onCapsuleTap()` → 因为 `isCapturing=true` → 执行 `cancelCapture()`。目标按钮从未收到点击，`TYPE_VIEW_CLICKED` 永远不会触发。
+
+**触摸流（修复前）**：
+```
+用户点「跳过」按钮
+  → 顶层胶囊 onCapsuleTouch → onCapsuleTap → cancelCapture() 💥
+  → 提示遮罩（FLAG_NOT_TOUCHABLE，穿透）
+  → App 的「跳过」按钮（从未收到点击）
+```
+
+**修复**：
+1. `enterCapture()` 时**隐藏胶囊**（`wm.removeView`），让触摸穿透到目标 App
+2. 添加 15 秒**超时自动取消**，防止用户进入捕获模式后无法退出
+3. 提示遮罩保持 `FLAG_NOT_TOUCHABLE`，不拦截触摸
+4. 捕获成功或超时后重新显示胶囊
+
+
 
 ### 4.1 ❌ `foregroundServiceType="dataSync"` 不适用于无障碍服务
 
@@ -261,3 +281,4 @@ CI（GitHub Actions）：`./gradlew assembleDebug`，产出在 `app/build/output
 | `fix: 移除 LinearLayout android:gap` | LinearLayout 不支持 gap 属性 |
 | `fix: Set→MutableSet` | Kotlin 编译类型错误 |
 | `fix: workflow 添加 tags 触发` | CI 自动 Release |
+| `fix: 捕获模式悬浮胶囊拦截触摸` | 捕获模式下胶囊在顶层吃掉触摸，导致永远捕获不到按钮 |

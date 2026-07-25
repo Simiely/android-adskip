@@ -14,6 +14,7 @@ import androidx.core.app.NotificationCompat
 import com.simely.adskip.R
 import com.simely.adskip.float.FloatWindowManager
 import com.simely.adskip.ui.MainActivity
+import com.simely.adskip.util.logi
 
 /**
  * 前台保活服务：常驻通知 + 持有悬浮胶囊，降低被 HyperOS 回收的概率。
@@ -25,6 +26,7 @@ class KeepAliveService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        logi { "KeepAliveService starting" }
         floatManager = FloatWindowManager(this)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(NOTIF_ID, buildNotification(),
@@ -41,6 +43,7 @@ class KeepAliveService : Service() {
     }
 
     override fun onDestroy() {
+        logi { "KeepAliveService stopping" }
         floatManager.hideCapsule()
         stopForeground(STOP_FOREGROUND_REMOVE)
         super.onDestroy()

@@ -9,6 +9,7 @@ import androidx.core.content.ContextCompat
 import com.simely.adskip.R
 import com.simely.adskip.databinding.ActivityMainBinding
 import com.simely.adskip.service.KeepAliveService
+import com.simely.adskip.util.AccessibilityUtil
 
 class MainActivity : AppCompatActivity() {
 
@@ -44,7 +45,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        val accOn = isAccessibilityEnabled()
+        val accOn = AccessibilityUtil.isEnabled(this)
         val overlayOn = Settings.canDrawOverlays(this)
         binding.tvStatus.text = if (accOn && overlayOn) {
             getString(R.string.status_running)
@@ -59,11 +60,4 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun isAccessibilityEnabled(): Boolean {
-        val services = Settings.Secure.getString(
-            contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-        ) ?: return false
-        // Android 存储的是完整类名，不是 manifest 里的 .service 短格式
-        return services.contains("com.simely.adskip/com.simely.adskip.service.AdSkipAccessibilityService")
-    }
 }
