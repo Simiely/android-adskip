@@ -39,6 +39,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         showDisabledRuleNotice()
+        refreshStats()
     }
 
     override fun onResume() {
@@ -46,12 +47,19 @@ class MainActivity : AppCompatActivity() {
         val accOn = isAccessibilityEnabled()
         val overlayOn = Settings.canDrawOverlays(this)
         binding.tvStatus.text = if (accOn && overlayOn) getString(R.string.status_running) else getString(R.string.status_stopped)
+        refreshStats()
     }
 
     private fun isAccessibilityEnabled(): Boolean {
         val service = "$packageName/com.simely.adskip.service.AdSkipAccessibilityService"
         val enabled = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
         return enabled?.contains(service) == true
+    }
+
+    private fun refreshStats() {
+        binding.tvTotalCount.text = "${stats.getTotalCount()}"
+        binding.tvTodayCount.text = "${stats.getTodayCount()}"
+        binding.tvUsageDays.text = "${stats.getUsageDays()}"
     }
 
     private fun showDisabledRuleNotice() {
