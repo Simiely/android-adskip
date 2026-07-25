@@ -11,7 +11,6 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- 状态卡片 -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -37,38 +36,12 @@
                     android:id="@+id/tv_status"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="8dp"
                     android:text="@string/status_stopped"
                     android:textColor="@color/text_secondary" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-                    <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                        android:text="悬浮窗" android:textSize="16sp" android:textColor="@color/text_primary" />
-                    <androidx.appcompat.widget.SwitchCompat
-                        android:id="@+id/switch_capsule"
-                        android:layout_width="wrap_content" android:layout_height="wrap_content" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-                    <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                        android:text="@string/switch_master" android:textSize="16sp" android:textColor="@color/text_primary" />
-                    <androidx.appcompat.widget.SwitchCompat
-                        android:id="@+id/switch_master"
-                        android:layout_width="wrap_content" android:layout_height="wrap_content" />
-                </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- 使用统计 -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -108,264 +81,29 @@
                         <TextView android:text="使用天数" android:textSize="12sp" android:textColor="@color/text_secondary" />
                     </LinearLayout>
                 </LinearLayout>
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_share"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="分享统计"
-                    android:textSize="12sp"
-                    app:cornerRadius="8dp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- 权限设置（可折叠） -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            app:cardCornerRadius="16dp"
-            app:cardBackgroundColor="@color/surface">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/header_permission"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="16dp"
-                    android:text="▼ 权限设置"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/text_primary"
-                    android:background="?attr/selectableItemBackground" />
-
-                <LinearLayout
-                    android:id="@+id/panel_permission"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:paddingHorizontal="16dp"
-                    android:paddingBottom="16dp">
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_accessibility"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/btn_open_accessibility"
-                        app:cornerRadius="12dp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_overlay"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/btn_open_overlay"
-                        app:cornerRadius="12dp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_battery"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/btn_open_battery"
-                        app:cornerRadius="12dp" />
-                </LinearLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- 规则与设置（可折叠，内联全部内容） -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            app:cardCornerRadius="16dp"
-            app:cardBackgroundColor="@color/surface">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/header_rules"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="16dp"
-                    android:text="▼ 规则与设置"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/text_primary"
-                    android:background="?attr/selectableItemBackground" />
-
-                <LinearLayout
-                    android:id="@+id/panel_rules"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:paddingHorizontal="16dp"
-                    android:paddingBottom="16dp">
-
-                    <!-- 总开关 -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-                        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                            android:text="@string/switch_master" android:textStyle="bold" android:textColor="@color/text_primary" />
-                        <androidx.appcompat.widget.SwitchCompat
-                            android:id="@+id/switch_master_rule"
-                            android:layout_width="wrap_content" android:layout_height="wrap_content" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginTop="4dp"
-                        android:layout_marginBottom="8dp">
-                        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                            android:text="@string/switch_keyword" android:textSize="13sp" android:textColor="@color/text_secondary" />
-                        <androidx.appcompat.widget.SwitchCompat
-                            android:id="@+id/switch_keyword"
-                            android:layout_width="wrap_content" android:layout_height="wrap_content" />
-                    </LinearLayout>
-
-                    <!-- 关键词管理 -->
-                    <TextView android:text="@string/section_keywords"
-                        android:textStyle="bold" android:textColor="@color/text_primary" />
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="4dp">
-                        <EditText android:id="@+id/et_keyword"
-                            android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                            android:hint="@string/hint_add_keyword" android:inputType="text" android:minHeight="40dp" />
-                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_add_keyword"
-                            android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="@string/btn_add" app:cornerRadius="8dp" />
-                    </LinearLayout>
-                    <LinearLayout android:id="@+id/list_keywords"
-                        android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp" android:orientation="vertical" />
-
-                    <!-- 手动规则 -->
-                    <TextView android:text="@string/section_rules"
-                        android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="12dp" />
-                    <TextView android:text="@string/btn_add_rule_hint"
-                        android:textSize="12sp" android:textColor="@color/text_secondary" />
-                    <LinearLayout android:id="@+id/list_rules"
-                        android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp" android:orientation="vertical" />
-                    <TextView android:id="@+id/tv_empty_rules"
-                        android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="@string/empty_rules" android:textColor="@color/text_secondary" />
-
-                    <!-- 隐藏菜单 -->
-                    <TextView android:text="隐藏菜单"
-                        android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="12dp" />
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="4dp">
-                        <EditText android:id="@+id/et_password"
-                            android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                            android:hint="输入密码（1234 规则同步 / 123 配置同步）"
-                            android:inputType="textPassword" android:minHeight="40dp" />
-                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_unlock"
-                            android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="解锁" app:cornerRadius="8dp" />
-                    </LinearLayout>
-
-                    <!-- 规则同步面板（密码 1234） -->
-                    <LinearLayout android:id="@+id/sync_panel"
-                        android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:orientation="vertical" android:visibility="gone">
-                        <EditText android:id="@+id/et_repo_owner"
-                            android:layout_width="match_parent" android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp" android:hint="@string/hint_repo_owner" android:inputType="text" />
-                        <EditText android:id="@+id/et_repo_name"
-                            android:layout_width="match_parent" android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp" android:hint="@string/hint_repo_name" android:inputType="text" />
-                        <EditText android:id="@+id/et_repo_branch"
-                            android:layout_width="match_parent" android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp" android:hint="@string/hint_repo_branch" android:inputType="text" />
-                        <EditText android:id="@+id/et_repo_path"
-                            android:layout_width="match_parent" android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp" android:hint="@string/hint_repo_path" android:inputType="text" />
-                        <EditText android:id="@+id/et_token"
-                            android:layout_width="match_parent" android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp" android:hint="@string/hint_token" android:inputType="textPassword" />
-                        <LinearLayout
-                            android:layout_width="match_parent" android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp" android:orientation="horizontal">
-                            <com.google.android.material.button.MaterialButton android:id="@+id/btn_download"
-                                style="@style/Widget.Material3.Button.OutlinedButton"
-                                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                                android:text="@string/btn_download" app:cornerRadius="8dp" />
-                            <com.google.android.material.button.MaterialButton android:id="@+id/btn_upload"
-                                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                                android:layout_marginStart="4dp" android:text="@string/btn_upload" app:cornerRadius="8dp" />
-                        </LinearLayout>
-                        <ProgressBar android:id="@+id/pb_sync"
-                            style="?android:attr/progressBarStyleHorizontal"
-                            android:layout_width="match_parent" android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp" android:indeterminate="true" android:visibility="gone" />
-                        <TextView android:id="@+id/tv_sync_status"
-                            android:layout_width="match_parent" android:layout_height="wrap_content"
-                            android:textColor="@color/text_secondary" />
-                    </LinearLayout>
-
-                    <!-- 配置同步面板（密码 123，仓库预置） -->
-                    <LinearLayout android:id="@+id/cfg_panel"
-                        android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:orientation="vertical" android:visibility="gone">
-                        <TextView android:text="仓库：Simiely/android-adskip → configs/"
-                            android:textSize="12sp" android:textColor="@color/text_secondary" android:layout_marginTop="4dp" />
-                        <EditText android:id="@+id/et_cfg_token"
-                            android:layout_width="match_parent" android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp" android:hint="GitHub Token（留空直接下载）" android:inputType="textPassword" />
-                        <LinearLayout
-                            android:layout_width="match_parent" android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp" android:orientation="horizontal">
-                            <com.google.android.material.button.MaterialButton android:id="@+id/btn_cfg_download"
-                                style="@style/Widget.Material3.Button.OutlinedButton"
-                                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                                android:text="下载配置" app:cornerRadius="8dp" />
-                            <com.google.android.material.button.MaterialButton android:id="@+id/btn_cfg_upload"
-                                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                                android:layout_marginStart="4dp" android:text="上传配置" app:cornerRadius="8dp" />
-                        </LinearLayout>
-                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_cfg_update_token"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="match_parent" android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp" android:text="更新 Token" app:cornerRadius="8dp" />
-                        <ProgressBar android:id="@+id/pb_cfg_sync"
-                            style="?android:attr/progressBarStyleHorizontal"
-                            android:layout_width="match_parent" android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp" android:indeterminate="true" android:visibility="gone" />
-                        <TextView android:id="@+id/tv_cfg_status"
-                            android:layout_width="match_parent" android:layout_height="wrap_content"
-                            android:textColor="@color/text_secondary" />
-                    </LinearLayout>
-                </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_accessibility"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="@string/btn_open_accessibility" app:cornerRadius="12dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_overlay"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="@string/btn_open_overlay" app:cornerRadius="12dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_battery"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="@string/btn_open_battery" app:cornerRadius="12dp" />
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_settings"
             style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/btn_open_settings"
-            app:cornerRadius="12dp" />
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="@string/btn_open_settings" app:cornerRadius="12dp" />
 
         <TextView
             android:layout_width="match_parent" android:layout_height="wrap_content"
