@@ -351,8 +351,8 @@
                         android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:text="@string/empty_rules" android:textColor="@color/text_secondary" />
 
-                    <!-- 隐藏同步（密码 12345678） -->
-                    <TextView android:text="@string/sync_title" android:textStyle="bold"
+                    <!-- 隐藏菜单（统一密码入口） -->
+                    <TextView android:text="隐藏菜单" android:textStyle="bold"
                         android:textColor="@color/text_primary" android:layout_marginTop="12dp" />
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -361,11 +361,13 @@
                         android:orientation="horizontal">
                         <EditText android:id="@+id/et_password"
                             android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                            android:hint="@string/hint_password" android:inputType="textPassword" android:minHeight="40dp" />
+                            android:hint="输入密码（1234 或 123）" android:inputType="textPassword" android:minHeight="40dp" />
                         <com.google.android.material.button.MaterialButton android:id="@+id/btn_unlock"
                             android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="@string/btn_unlock" app:cornerRadius="8dp" />
+                            android:text="解锁" app:cornerRadius="8dp" />
                     </LinearLayout>
+
+                    <!-- 密码1234：规则同步面板 -->
                     <LinearLayout android:id="@+id/sync_panel"
                         android:layout_width="match_parent" android:layout_height="wrap_content"
                         android:orientation="vertical" android:visibility="gone">
@@ -404,37 +406,15 @@
                             android:textColor="@color/text_secondary" />
                     </LinearLayout>
 
-                    <!-- 配置同步（密码 123） -->
-                    <TextView android:text="配置同步（隐藏）" android:textStyle="bold"
-                        android:textColor="@color/text_primary" android:layout_marginTop="12dp" />
-                    <LinearLayout
-                        android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp" android:orientation="horizontal">
-                        <EditText android:id="@+id/et_cfg_password"
-                            android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                            android:hint="输入密码（123）" android:inputType="textPassword" android:minHeight="40dp" />
-                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_cfg_unlock"
-                            android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="解锁" app:cornerRadius="8dp" />
-                    </LinearLayout>
-                    <LinearLayout android:id="@+id/cfg_sync_panel"
+                    <!-- 密码123：配置同步面板（仓库预置，只需Token） -->
+                    <LinearLayout android:id="@+id/cfg_panel"
                         android:layout_width="match_parent" android:layout_height="wrap_content"
                         android:orientation="vertical" android:visibility="gone">
-                        <EditText android:id="@+id/et_cfg_owner"
-                            android:layout_width="match_parent" android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp" android:hint="仓库所有者 (owner)" android:inputType="text" />
-                        <EditText android:id="@+id/et_cfg_repo"
-                            android:layout_width="match_parent" android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp" android:hint="仓库名 (repo)" android:inputType="text" />
-                        <EditText android:id="@+id/et_cfg_branch"
-                            android:layout_width="match_parent" android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp" android:hint="分支 (branch)" android:inputType="text" />
-                        <EditText android:id="@+id/et_cfg_path"
-                            android:layout_width="match_parent" android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp" android:hint="文件夹路径 (如 configs)" android:inputType="text" />
+                        <TextView android:text="仓库：Simiely/android-adskip  →  configs/"
+                            android:textSize="12sp" android:textColor="@color/text_secondary" android:layout_marginTop="4dp" />
                         <EditText android:id="@+id/et_cfg_token"
                             android:layout_width="match_parent" android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp" android:hint="GitHub Token" android:inputType="textPassword" />
+                            android:layout_marginTop="4dp" android:hint="GitHub Token（留空直接下载）" android:inputType="textPassword" />
                         <LinearLayout
                             android:layout_width="match_parent" android:layout_height="wrap_content"
                             android:layout_marginTop="4dp" android:orientation="horizontal">

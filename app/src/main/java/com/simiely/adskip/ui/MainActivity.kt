@@ -80,13 +80,12 @@ class MainActivity : AppCompatActivity() {
             if (kw.isNotEmpty()) { ruleStore.addKeyword(kw); binding.etKeyword.text.clear(); renderKeywords() }
         }
 
-        // ── 密码门 ──
+        // ── 统一密码门 ──
         if (!secure.isPasswordSet()) secure.setPasswordHash(SecurePrefs.hash("12345678"))
         if (!secure.isConfigPasswordSet()) secure.setConfigPasswordHash(SecurePrefs.hash("123"))
         binding.btnUnlock.setOnClickListener { handleUnlock() }
         binding.btnDownload.setOnClickListener { onDownload() }
         binding.btnUpload.setOnClickListener { onUpload() }
-        binding.btnCfgUnlock.setOnClickListener { handleCfgUnlock() }
         binding.btnCfgDownload.setOnClickListener { onCfgDownload() }
         binding.btnCfgUpload.setOnClickListener { onCfgUpload() }
         binding.btnCfgUpdateToken.setOnClickListener { onCfgUpdateToken() }
@@ -219,20 +218,35 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ── 同步（密码 12345678） ──
+    // ── 统一密码门：1234→规则同步  123→配置同步 ──
     private fun handleUnlock() {
         val pwd = binding.etPassword.text.toString()
         if (pwd.isEmpty()) return toast("请输入密码")
-        if (SecurePrefs.hash(pwd) == secure.getPasswordHash()) {
-            binding.syncPanel.visibility = View.VISIBLE
-            binding.etPassword.text.clear()
-            binding.etRepoOwner.setText(secure.getRepoOwner())
-            binding.etRepoName.setText(secure.getRepoName())
-            binding.etRepoBranch.setText(secure.getRepoBranch())
-            binding.etRepoPath.setText(secure.getRepoPath())
-            binding.etToken.setText(secure.getToken())
-            toast(R.string.toast_unlocked)
-        } else toast(R.string.toast_wrong_password)
+        val hash = SecurePrefs.hash(pwd)
+        when {
+            hash == secure.getPasswordHash() -> {
+                revealSyncPanel(); toast(R.string.toast_unlocked)
+            }
+            hash == secure.getConfigPasswordHash() -> {
+                revealCfgPanel(); toast("配置面板已解锁")
+            }
+            else -> toast(R.string.toast_wrong_password)
+        }
+        binding.etPassword.text.clear()
+    }
+
+    private fun revealSyncPanel() {
+        binding.syncPanel.visibility = View.VISIBLE; binding.cfgPanel.visibility = View.GONE
+        binding.etRepoOwner.setText(secure.getRepoOwner())
+        binding.etRepoName.setText(secure.getRepoName())
+        binding.etRepoBranch.setText(secure.getRepoBranch())
+        binding.etRepoPath.setText(secure.getRepoPath())
+        binding.etToken.setText(secure.getToken())
+    }
+
+    private fun revealCfgPanel() {
+        binding.cfgPanel.visibility = View.VISIBLE; binding.syncPanel.visibility = View.GONE
+        binding.etCfgToken.setText(secure.getConfigToken())
     }
 
     private data class RepoConfig(val owner: String, val repo: String, val branch: String, val path: String)
@@ -294,58 +308,40 @@ class MainActivity : AppCompatActivity() {
         binding.tvSyncStatus.text = ""
     }
 
-    // ── 配置同步（密码 123） ──
-    private fun handleCfgUnlock() {
-        val pwd = binding.etCfgPassword.text.toString()
-        if (pwd.isEmpty()) return toast("请输入密码")
-        if (SecurePrefs.hash(pwd) == secure.getConfigPasswordHash()) {
-            binding.cfgSyncPanel.visibility = View.VISIBLE; binding.etCfgPassword.text.clear()
-            binding.etCfgOwner.setText(secure.getConfigOwner()); binding.etCfgRepo.setText(secure.getConfigRepo())
-            binding.etCfgBranch.setText(secure.getConfigBranch()); binding.etCfgPath.setText(secure.getConfigPath())
-            binding.etCfgToken.setText(secure.getConfigToken())
-            toast("配置面板已解锁")
-        } else toast(R.string.toast_wrong_password)
-    }
-
-    private fun readCfg(): RepoConfig = RepoConfig(
-        binding.etCfgOwner.text.toString().trim(), binding.etCfgRepo.text.toString().trim(),
-        binding.etCfgBranch.text.toString().trim().ifEmpty { "main" }, binding.etCfgPath.text.toString().trim()
-    )
-    private fun persistCfg(cfg: RepoConfig) {
-        secure.setConfigOwner(cfg.owner); secure.setConfigRepo(cfg.repo)
-        secure.setConfigBranch(cfg.branch); secure.setConfigPath(cfg.path)
-    }
+    // ── 配置同步（密码 123，仓库预置） ──
+    private val CFG_OWNER = "Simiely"
+    private val CFG_REPO = "android-adskip"
+    private val CFG_BRANCH = "main"
+    private val CFG_PATH = "configs"
 
     private fun onCfgDownload() {
-        val cfg = readCfg()
-        if (cfg.owner.isEmpty() || cfg.repo.isEmpty()) return toast("请填写仓库 owner 与 repo")
-        persistCfg(cfg)
         val token = binding.etCfgToken.text.toString().trim()
         secure.setConfigToken(token)
-        if (token.isEmpty()) return toast("配置同步需要 Token")
         startCfgSync()
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val files = GitHubSync.listFolder(cfg.owner, cfg.repo, cfg.branch, cfg.path, token)
+                val files = if (token.isEmpty()) {
+                    listOf("rules.json" to "https://raw.githubusercontent.com/$CFG_OWNER/$CFG_REPO/$CFG_BRANCH/$CFG_PATH/rules.json")
+                } else {
+                    GitHubSync.listFolder(CFG_OWNER, CFG_REPO, CFG_BRANCH, CFG_PATH, token)
+                }
                 if (files.isEmpty()) { withContext(Dispatchers.Main) { stopCfgSync(); toast("目录为空") }; return@launch }
                 for ((name, url) in files) {
                     if (!name.endsWith(".json")) continue
-                    runCatching { ruleStore.mergeRemote(RuleSet.parse(GitHubSync.downloadRawContent(url))) }
+                    val json = if (token.isEmpty()) GitHubSync.downloadRaw(CFG_OWNER, CFG_REPO, CFG_BRANCH, "$CFG_PATH/$name")
+                    else GitHubSync.downloadRawContent(url)
+                    runCatching { ruleStore.mergeRemote(RuleSet.parse(json)) }
                 }
                 withContext(Dispatchers.Main) { stopCfgSync(); toast("下载完成"); renderRules(); renderKeywords() }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) { stopCfgSync(); toast(getString(R.string.toast_sync_fail, e.message ?: "")) }
+                withContext(Dispatchers.Main) { stopCfgSync(); toast("下载失败: ${e.message}") }
             }
         }
     }
 
     private fun onCfgUpload() {
         val token = binding.etCfgToken.text.toString().trim()
-        if (token.isEmpty()) { toast("请先设置 Token"); onCfgUpdateToken(); return }
-        val cfg = readCfg()
-        if (cfg.owner.isEmpty() || cfg.repo.isEmpty()) return toast("请填写 owner/repo")
-        if (cfg.path.isEmpty()) return toast("请填写文件夹路径")
-        persistCfg(cfg)
+        if (token.isEmpty()) { toast("请先输入 Token"); onCfgUpdateToken(); return }
         startCfgSync()
         lifecycleScope.launch(Dispatchers.IO) {
             try {
@@ -353,9 +349,9 @@ class MainActivity : AppCompatActivity() {
                     withContext(Dispatchers.Main) { stopCfgSync(); toast("Token 无效") }; return@launch
                 }
                 secure.setConfigToken(token)
-                val filePath = "${cfg.path.trimEnd('/')}/rules.json"
-                val (_, sha) = GitHubSync.downloadApi(cfg.owner, cfg.repo, cfg.branch, filePath, token)
-                val ok = GitHubSync.upload(cfg.owner, cfg.repo, cfg.branch, filePath, token, ruleStore.exportSet().toJsonString(), sha)
+                val filePath = "$CFG_PATH/rules.json"
+                val (_, sha) = GitHubSync.downloadApi(CFG_OWNER, CFG_REPO, CFG_BRANCH, filePath, token)
+                val ok = GitHubSync.upload(CFG_OWNER, CFG_REPO, CFG_BRANCH, filePath, token, ruleStore.exportSet().toJsonString(), sha)
                 withContext(Dispatchers.Main) { stopCfgSync(); toast(if (ok) getString(R.string.toast_upload_ok) else "上传失败") }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) { stopCfgSync(); toast(getString(R.string.toast_sync_fail, e.message ?: "")) }
