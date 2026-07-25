@@ -53,7 +53,7 @@ class StatsStore(context: Context) {
         val today = dateFmt.format(Date())
         val map = dailyMap().toMutableMap()
         map[today] = (map[today] ?: 0) + 1
-        prefs.edit().putString(KEY_DAILY, JSONObject(map).toString()).apply()
+        prefs.edit().putString(KEY_DAILY, JSONObject(map as Map<String, Any>).toString()).apply()
         prefs.edit().putLong(KEY_TOTAL, getTotalCount() + 1).apply()
         if (prefs.getLong(KEY_START, 0L) == 0L) {
             prefs.edit().putLong(KEY_START, System.currentTimeMillis()).apply()

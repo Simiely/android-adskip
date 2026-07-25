@@ -9,9 +9,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.simely.adskip.R
 import com.simely.adskip.databinding.ActivityMainBinding
-import com.simely.adskip.service.KeepAliveService
 import com.simely.adskip.store.StatsStore
-import com.simely.adskip.util.AccessibilityUtil
 import com.simely.adskip.util.SecurePrefs
 
 class MainActivity : AppCompatActivity() {
@@ -40,12 +38,6 @@ class MainActivity : AppCompatActivity() {
         binding.btnSettings.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
-        binding.switchCapsule.setOnCheckedChangeListener { _, checked ->
-            val intent = Intent(this, KeepAliveService::class.java).apply {
-                action = if (checked) KeepAliveService.ACTION_SHOW_CAPSULE else KeepAliveService.ACTION_HIDE_CAPSULE
-            }
-            ContextCompat.startForegroundService(this, intent)
-        }
 
         refreshStats()
         showDisabledRuleNotice()
@@ -53,13 +45,16 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        val accOn = AccessibilityUtil.isEnabled(this)
+        val accOn = isAccessibilityEnabled()
         val overlayOn = Settings.canDrawOverlays(this)
         binding.tvStatus.text = if (accOn && overlayOn) getString(R.string.status_running) else getString(R.string.status_stopped)
-        binding.switchCapsule.isEnabled = accOn && overlayOn
-        if (!binding.switchCapsule.isEnabled) binding.switchCapsule.isChecked = false
-        if (accOn) ContextCompat.startForegroundService(this, Intent(this, KeepAliveService::class.java))
         refreshStats()
+    }
+
+    private fun isAccessibilityEnabled(): Boolean {
+        val service = "$packageName/com.simely.adskip.service.AdSkipAccessibilityService"
+        val enabled = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
+        return enabled?.contains(service) == true
     }
 
     private fun refreshStats() {
