@@ -26,6 +26,13 @@
 # ── 自定义 View（layout XML 引用，类名不能被混淆） ──
 -keep class com.simely.adskip.ui.ChartView { *; }
 
+# ── ViewBinding 生成的类（反射创建） ──
+-keep class com.simely.adskip.databinding.** { *; }
+
+# ── MainActivity & 统计相关类 ──
+-keep class com.simely.adskip.ui.MainActivity { *; }
+-keep class com.simely.adskip.store.StatsStore { *; }
+
 # ── 标准 ProGuard ──
 -keepattributes Signature
 -keepattributes *Annotation*
