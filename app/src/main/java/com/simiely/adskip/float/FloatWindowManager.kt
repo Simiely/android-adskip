@@ -118,14 +118,18 @@ class FloatWindowManager(private val context: Context) {
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 v.removeCallbacks(null)
-                if (!moved && !longPressed && !AppState.isCapturing) onCapsuleTap()
+                if (!moved && !longPressed) onCapsuleTap()
             }
         }
         return true
     }
 
     private fun onCapsuleTap() {
-        enterCapture()
+        if (AppState.isCapturing) {
+            cancelCapture()
+        } else {
+            enterCapture()
+        }
     }
 
     fun enterCapture() {
@@ -137,10 +141,10 @@ class FloatWindowManager(private val context: Context) {
             onCancelled = { exitCaptureMode() }
         )
 
-        // Android 12+ 信任触摸限制：只能用 FLAG_NOT_TOUCHABLE 让触摸完全穿透
+        // FLAG_NOT_TOUCH_MODAL：胶囊区域可点击（取消），胶囊外穿透到 App 按钮
         capsuleView?.let { v ->
             capsuleParams.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
             wm.updateViewLayout(v, capsuleParams)
             v.findViewById<View>(R.id.capsule)?.let {
                 it.setBackgroundResource(R.drawable.bg_capsule_capture)
