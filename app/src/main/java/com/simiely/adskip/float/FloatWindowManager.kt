@@ -141,11 +141,9 @@ class FloatWindowManager(private val context: Context) {
             onCancelled = { exitCaptureMode() }
         )
 
-        // FLAG_NOT_TOUCH_MODAL：胶囊区域可点击（取消），胶囊外穿透到 App 按钮
+        // 不修改胶囊 flag：胶囊 48dp 在左上角，不挡按钮
+        // 提示遮罩 FLAG_NOT_TOUCHABLE 穿透，触摸可达 App 按钮
         capsuleView?.let { v ->
-            capsuleParams.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
-            wm.updateViewLayout(v, capsuleParams)
             v.findViewById<View>(R.id.capsule)?.let {
                 it.setBackgroundResource(R.drawable.bg_capsule_capture)
             }
@@ -166,8 +164,6 @@ class FloatWindowManager(private val context: Context) {
 
     private fun exitCaptureMode() {
         capsuleView?.let { v ->
-            capsuleParams.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-            wm.updateViewLayout(v, capsuleParams)
             v.findViewById<View>(R.id.capsule)?.let {
                 it.setBackgroundResource(R.drawable.bg_capsule)
             }

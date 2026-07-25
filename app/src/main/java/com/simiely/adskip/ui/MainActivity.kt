@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.simely.adskip.R
@@ -20,33 +21,38 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // 权限按钮
         binding.btnAccessibility.setOnClickListener {
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
         binding.btnOverlay.setOnClickListener {
-            val intent = Intent(
+            startActivity(Intent(
                 Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                 Uri.parse("package:$packageName")
-            )
-            startActivity(intent)
+            ))
         }
         binding.btnBattery.setOnClickListener {
-            // 应用管理页：在此设置省电无限制 / 自启动 / 任务栏锁定
-            val intent = Intent(
+            startActivity(Intent(
                 Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                 Uri.parse("package:$packageName")
-            )
-            startActivity(intent)
+            ))
         }
         binding.btnSettings.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
-        binding.btnShowCapsule.setOnClickListener {
+
+        // 悬浮窗开关
+        binding.switchCapsule.setOnCheckedChangeListener { _, checked ->
             val intent = Intent(this, KeepAliveService::class.java).apply {
-                action = KeepAliveService.ACTION_SHOW_CAPSULE
+                action = if (checked) KeepAliveService.ACTION_SHOW_CAPSULE
+                         else KeepAliveService.ACTION_HIDE_CAPSULE
             }
             ContextCompat.startForegroundService(this, intent)
         }
+
+        // 可折叠面板
+        setupCollapsible(binding.headerPermission, binding.panelPermission, "panel_permission")
+        setupCollapsible(binding.headerSettings, binding.panelSettings, "panel_settings")
     }
 
     override fun onResume() {
@@ -58,12 +64,46 @@ class MainActivity : AppCompatActivity() {
         } else {
             getString(R.string.status_stopped)
         }
+
+        // 悬浮窗开关同步状态
+        if (accOn && overlayOn) {
+            binding.switchCapsule.isEnabled = true
+            // 不自动切换开关状态，由用户控制
+        } else {
+            binding.switchCapsule.isEnabled = false
+            binding.switchCapsule.isChecked = false
+        }
+
         if (accOn) {
-            // 无障碍已开 → 拉起保活服务（带动悬浮胶囊）
             ContextCompat.startForegroundService(
                 this, Intent(this, KeepAliveService::class.java)
             )
         }
     }
 
+    private fun setupCollapsible(header: View, panel: View, key: String) {
+        val prefs = getSharedPreferences("main_ui", MODE_PRIVATE)
+        val expanded = prefs.getBoolean(key, true) // 默认展开
+
+        fun updateState() {
+            val isExpanded = panel.visibility == View.VISIBLE
+            header.text = header.text.toString().replaceFirst(if (isExpanded) "▼" else "▶", if (isExpanded) "▶" else "▼")
+        }
+
+        if (!expanded) {
+            panel.visibility = View.GONE
+            header.text = header.text.toString().replace("▼", "▶")
+        }
+
+        header.setOnClickListener {
+            if (panel.visibility == View.VISIBLE) {
+                panel.visibility = View.GONE
+                prefs.edit().putBoolean(key, false).apply()
+            } else {
+                panel.visibility = View.VISIBLE
+                prefs.edit().putBoolean(key, true).apply()
+            }
+            updateState()
+        }
+    }
 }
