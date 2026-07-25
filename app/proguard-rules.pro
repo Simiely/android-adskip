@@ -23,8 +23,8 @@
 -dontwarn javax.annotation.**
 -dontwarn com.google.crypto.tink.**
 
-# ── ViewBinding 生成的类（反射创建） ──
--keep class com.simely.adskip.databinding.** { *; }
+# ── 自定义 View（layout XML 引用，类名不能被混淆） ──
+-keep class com.simely.adskip.ui.ChartView { *; }
 
 # ── 标准 ProGuard ──
 -keepattributes Signature
