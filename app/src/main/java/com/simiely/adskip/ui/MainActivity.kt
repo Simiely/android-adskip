@@ -57,20 +57,28 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refreshStats() {
-        binding.tvTotalCount.text = "${stats.getTotalCount()}"
-        binding.tvTodayCount.text = "${stats.getTodayCount()}"
-        binding.tvUsageDays.text = "${stats.getUsageDays()}"
+        try {
+            binding.tvTotalCount.text = "${stats.getTotalCount()}"
+            binding.tvTodayCount.text = "${stats.getTodayCount()}"
+            binding.tvUsageDays.text = "${stats.getUsageDays()}"
+        } catch (e: Exception) {
+            // silently ignore stats errors
+        }
     }
 
     private fun showDisabledRuleNotice() {
-        val rule = secure.getDisabledRule()
-        if (rule.isEmpty()) return
-        secure.clearDisabledRule()
-        val parts = rule.split("|", limit = 2)
-        AlertDialog.Builder(this)
-            .setTitle("总开关已自动关闭")
-            .setMessage("检测到 ${parts.getOrElse(1) { parts[0] }} 在 5 秒内触发了 3 次，已自动关闭总开关。")
-            .setPositiveButton("知道了", null)
-            .show()
+        try {
+            val rule = secure.getDisabledRule()
+            if (rule.isEmpty()) return
+            secure.clearDisabledRule()
+            val parts = rule.split("|", limit = 2)
+            AlertDialog.Builder(this)
+                .setTitle("总开关已自动关闭")
+                .setMessage("检测到 ${parts.getOrElse(1) { parts[0] }} 在 5 秒内触发了 3 次，已自动关闭总开关。")
+                .setPositiveButton("知道了", null)
+                .show()
+        } catch (e: Exception) {
+            // silently ignore
+        }
     }
 }
