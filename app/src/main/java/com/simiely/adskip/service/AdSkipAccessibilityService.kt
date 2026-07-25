@@ -6,6 +6,7 @@ import android.view.accessibility.AccessibilityNodeInfo
 import com.simely.adskip.AppState
 import com.simely.adskip.model.Rule
 import com.simely.adskip.store.RuleStore
+import com.simely.adskip.store.StatsStore
 import com.simely.adskip.util.SecurePrefs
 import com.simely.adskip.util.logd
 import com.simely.adskip.util.loge
@@ -22,6 +23,7 @@ class AdSkipAccessibilityService : AccessibilityService() {
 
     private var ruleStore: RuleStore? = null
     private var secure: SecurePrefs? = null
+    private var statsStore: StatsStore? = null
     /** 冷却 Map：最多保留 100 条，超过后清理过期条目后再插入 */
     private val lastClick = object : LinkedHashMap<String, Long>(100, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Long>?): Boolean {
@@ -43,6 +45,7 @@ class AdSkipAccessibilityService : AccessibilityService() {
         try {
             ruleStore = RuleStore(this)
             secure = SecurePrefs(this)
+            statsStore = StatsStore(this)
             logi { "Service created, rules loaded" }
         } catch (e: Exception) {
             loge({ "Failed to init store/prefs" }, e)
@@ -109,6 +112,13 @@ class AdSkipAccessibilityService : AccessibilityService() {
             if (now - (lastClick[key] ?: 0L) < COOLDOWN_MS) continue
             lastClick[key] = now
             clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            // 记录统计
+            statsStore?.recordClick()
+            statsStore?.addLog(
+                pkg = pkg,
+                text = clickable.text?.toString() ?: node.text?.toString() ?: "",
+                viewId = clickable.viewIdResourceName
+            )
             break
         }
     }

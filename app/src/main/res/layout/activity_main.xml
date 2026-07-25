@@ -48,7 +48,6 @@
                     android:layout_marginTop="12dp"
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
-
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -56,11 +55,156 @@
                         android:text="悬浮窗"
                         android:textSize="16sp"
                         android:textColor="@color/text_primary" />
-
                     <androidx.appcompat.widget.SwitchCompat
                         android:id="@+id/switch_capsule"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- 统计数据（可折叠） -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardCornerRadius="16dp"
+            app:cardBackgroundColor="@color/surface">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/header_stats"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="16dp"
+                    android:text="▼ 使用统计"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary"
+                    android:background="?attr/selectableItemBackground" />
+
+                <LinearLayout
+                    android:id="@+id/panel_stats"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="16dp"
+                    android:paddingBottom="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:gravity="center">
+                            <TextView android:id="@+id/tv_total_count" android:textSize="28sp" android:textStyle="bold" android:textColor="@color/text_primary" android:text="0" />
+                            <TextView android:text="总点击" android:textSize="12sp" android:textColor="@color/text_secondary" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:gravity="center">
+                            <TextView android:id="@+id/tv_today_count" android:textSize="28sp" android:textStyle="bold" android:textColor="@color/text_primary" android:text="0" />
+                            <TextView android:text="今日" android:textSize="12sp" android:textColor="@color/text_secondary" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:gravity="center">
+                            <TextView android:id="@+id/tv_usage_days" android:textSize="28sp" android:textStyle="bold" android:textColor="@color/text_primary" android:text="0" />
+                            <TextView android:text="使用天数" android:textSize="12sp" android:textColor="@color/text_secondary" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- 7天走势图 -->
+                    <com.simely.adskip.ui.ChartView
+                        android:id="@+id/chart_view"
+                        android:layout_width="match_parent"
+                        android:layout_height="120dp"
+                        android:layout_marginTop="12dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_monthly"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="每月"
+                            android:textSize="12sp"
+                            app:cornerRadius="8dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_yearly"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:text="每年"
+                            android:textSize="12sp"
+                            app:cornerRadius="8dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_share"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:text="分享"
+                            android:textSize="12sp"
+                            app:cornerRadius="8dp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tv_detail_stats"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:textSize="11sp"
+                        android:textColor="@color/text_secondary"
+                        android:visibility="gone" />
+
+                    <!-- 最近日志 -->
+                    <TextView
+                        android:id="@+id/header_logs"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:paddingVertical="8dp"
+                        android:text="▶ 最近点击记录"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary"
+                        android:background="?attr/selectableItemBackground" />
+
+                    <LinearLayout
+                        android:id="@+id/panel_logs"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone" />
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -121,7 +265,7 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- 规则与同步（可折叠） -->
+        <!-- 规则与设置（可折叠，内联所有内容） -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -135,31 +279,185 @@
                 android:orientation="vertical">
 
                 <TextView
-                    android:id="@+id/header_settings"
+                    android:id="@+id/header_rules"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:padding="16dp"
-                    android:text="▼ 规则与同步"
+                    android:text="▼ 规则与设置"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:textColor="@color/text_primary"
                     android:background="?attr/selectableItemBackground" />
 
                 <LinearLayout
-                    android:id="@+id/panel_settings"
+                    android:id="@+id/panel_rules"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:paddingHorizontal="16dp"
                     android:paddingBottom="16dp">
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_settings"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
+                    <!-- 总开关 -->
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/btn_open_settings"
-                        app:cornerRadius="12dp" />
+                        android:orientation="horizontal">
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                            android:text="@string/switch_master" android:textStyle="bold" android:textColor="@color/text_primary" />
+                        <androidx.appcompat.widget.SwitchCompat android:id="@+id/switch_master"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:layout_marginBottom="8dp"
+                        android:orientation="horizontal">
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                            android:text="@string/switch_keyword" android:textSize="13sp" android:textColor="@color/text_secondary" />
+                        <androidx.appcompat.widget.SwitchCompat android:id="@+id/switch_keyword"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                    </LinearLayout>
+
+                    <!-- 关键词管理 -->
+                    <TextView android:text="@string/section_keywords" android:textStyle="bold"
+                        android:textColor="@color/text_primary" android:layout_marginTop="4dp" />
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:orientation="horizontal">
+                        <EditText android:id="@+id/et_keyword"
+                            android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                            android:hint="@string/hint_add_keyword" android:inputType="text" android:minHeight="40dp" />
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_add_keyword"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/btn_add" app:cornerRadius="8dp" />
+                    </LinearLayout>
+                    <LinearLayout android:id="@+id/list_keywords"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp" android:orientation="vertical" />
+
+                    <!-- 手动规则 -->
+                    <TextView android:text="@string/section_rules" android:textStyle="bold"
+                        android:textColor="@color/text_primary" android:layout_marginTop="12dp" />
+                    <TextView android:text="@string/btn_add_rule_hint"
+                        android:textSize="12sp" android:textColor="@color/text_secondary" />
+                    <LinearLayout android:id="@+id/list_rules"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp" android:orientation="vertical" />
+                    <TextView android:id="@+id/tv_empty_rules"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="@string/empty_rules" android:textColor="@color/text_secondary" />
+
+                    <!-- 隐藏同步（密码 12345678） -->
+                    <TextView android:text="@string/sync_title" android:textStyle="bold"
+                        android:textColor="@color/text_primary" android:layout_marginTop="12dp" />
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:orientation="horizontal">
+                        <EditText android:id="@+id/et_password"
+                            android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                            android:hint="@string/hint_password" android:inputType="textPassword" android:minHeight="40dp" />
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_unlock"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/btn_unlock" app:cornerRadius="8dp" />
+                    </LinearLayout>
+                    <LinearLayout android:id="@+id/sync_panel"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="vertical" android:visibility="gone">
+                        <EditText android:id="@+id/et_repo_owner"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:hint="@string/hint_repo_owner" android:inputType="text" />
+                        <EditText android:id="@+id/et_repo_name"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:hint="@string/hint_repo_name" android:inputType="text" />
+                        <EditText android:id="@+id/et_repo_branch"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:hint="@string/hint_repo_branch" android:inputType="text" />
+                        <EditText android:id="@+id/et_repo_path"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:hint="@string/hint_repo_path" android:inputType="text" />
+                        <EditText android:id="@+id/et_token"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:hint="@string/hint_token" android:inputType="textPassword" />
+                        <LinearLayout
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:orientation="horizontal">
+                            <com.google.android.material.button.MaterialButton android:id="@+id/btn_download"
+                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                                android:text="@string/btn_download" app:cornerRadius="8dp" />
+                            <com.google.android.material.button.MaterialButton android:id="@+id/btn_upload"
+                                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                                android:layout_marginStart="4dp" android:text="@string/btn_upload" app:cornerRadius="8dp" />
+                        </LinearLayout>
+                        <ProgressBar android:id="@+id/pb_sync"
+                            style="?android:attr/progressBarStyleHorizontal"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:indeterminate="true" android:visibility="gone" />
+                        <TextView android:id="@+id/tv_sync_status"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:textColor="@color/text_secondary" />
+                    </LinearLayout>
+
+                    <!-- 配置同步（密码 123） -->
+                    <TextView android:text="配置同步（隐藏）" android:textStyle="bold"
+                        android:textColor="@color/text_primary" android:layout_marginTop="12dp" />
+                    <LinearLayout
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp" android:orientation="horizontal">
+                        <EditText android:id="@+id/et_cfg_password"
+                            android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                            android:hint="输入密码（123）" android:inputType="textPassword" android:minHeight="40dp" />
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_cfg_unlock"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="解锁" app:cornerRadius="8dp" />
+                    </LinearLayout>
+                    <LinearLayout android:id="@+id/cfg_sync_panel"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="vertical" android:visibility="gone">
+                        <EditText android:id="@+id/et_cfg_owner"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:hint="仓库所有者 (owner)" android:inputType="text" />
+                        <EditText android:id="@+id/et_cfg_repo"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:hint="仓库名 (repo)" android:inputType="text" />
+                        <EditText android:id="@+id/et_cfg_branch"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:hint="分支 (branch)" android:inputType="text" />
+                        <EditText android:id="@+id/et_cfg_path"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:hint="文件夹路径 (如 configs)" android:inputType="text" />
+                        <EditText android:id="@+id/et_cfg_token"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:hint="GitHub Token" android:inputType="textPassword" />
+                        <LinearLayout
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:orientation="horizontal">
+                            <com.google.android.material.button.MaterialButton android:id="@+id/btn_cfg_download"
+                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                                android:text="下载配置" app:cornerRadius="8dp" />
+                            <com.google.android.material.button.MaterialButton android:id="@+id/btn_cfg_upload"
+                                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                                android:layout_marginStart="4dp" android:text="上传配置" app:cornerRadius="8dp" />
+                        </LinearLayout>
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_cfg_update_token"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:text="更新 Token" app:cornerRadius="8dp" />
+                        <ProgressBar android:id="@+id/pb_cfg_sync"
+                            style="?android:attr/progressBarStyleHorizontal"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:indeterminate="true" android:visibility="gone" />
+                        <TextView android:id="@+id/tv_cfg_status"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:textColor="@color/text_secondary" />
+                    </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
