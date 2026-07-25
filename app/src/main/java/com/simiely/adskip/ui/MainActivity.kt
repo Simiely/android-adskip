@@ -197,20 +197,24 @@ class MainActivity : AppCompatActivity() {
 
         b.pbSync.visibility = View.VISIBLE
         b.tvSyncStatus.text = ""
-        val rules = RuleSet(ruleStore.getKeywords(), ruleStore.getRules())
 
         lifecycleScope.launch {
-            val result = withContext(Dispatchers.IO) {
-                try {
-                    val sync = GitHubSync(owner, repo, branch, token.ifEmpty { null })
-                    if (download) sync.download(path) else { sync.upload(path, rules); rules }
-                } catch (e: Exception) { null }
+            try {
+                val sync = GitHubSync(owner, repo, branch, token.ifEmpty { null })
+                if (download) {
+                    val json = sync.downloadRaw(owner, repo, branch, path)
+                    val rsParse = RuleSet.parse(json)
+                    if (rsParse != null) { ruleStore.mergeRemote(rsParse); renderKeywords(); renderRules() }
+                    b.tvSyncStatus.text = "下载完成"
+                } else {
+                    val rs = RuleSet(ruleStore.getKeywords(), ruleStore.getRules())
+                    sync.upload(owner, repo, branch, path, token, rs.toJsonString(), null)
+                    b.tvSyncStatus.text = "上传完成"
+                }
+            } catch (e: Exception) {
+                b.tvSyncStatus.text = "失败: ${e.message}"
             }
             b.pbSync.visibility = View.GONE
-            if (result != null) {
-                if (download) { ruleStore.merge(result); renderKeywords(); renderRules() }
-                b.tvSyncStatus.text = if (download) "下载完成" else "上传完成"
-            } else b.tvSyncStatus.text = "操作失败"
         }
     }
 
@@ -224,20 +228,24 @@ class MainActivity : AppCompatActivity() {
 
         b.pbCfgSync.visibility = View.VISIBLE
         b.tvCfgStatus.text = ""
-        val cfg = RuleSet(ruleStore.getKeywords(), ruleStore.getRules())
 
         lifecycleScope.launch {
-            val result = withContext(Dispatchers.IO) {
-                try {
-                    val sync = GitHubSync("Simiely", "android-adskip", "main", token.ifEmpty { null })
-                    if (download) sync.download("configs/rules.json") else { sync.upload("configs/rules.json", cfg); cfg }
-                } catch (e: Exception) { null }
+            try {
+                val sync = GitHubSync("Simiely", "android-adskip", "main", token.ifEmpty { null })
+                if (download) {
+                    val json = sync.downloadRaw("Simiely", "android-adskip", "main", "configs/rules.json")
+                    val rsParse = RuleSet.parse(json)
+                    if (rsParse != null) { ruleStore.mergeRemote(rsParse); renderKeywords(); renderRules() }
+                    b.tvCfgStatus.text = "配置下载完成"
+                } else {
+                    val rs = RuleSet(ruleStore.getKeywords(), ruleStore.getRules())
+                    sync.upload("Simiely", "android-adskip", "main", "configs/rules.json", token, rs.toJsonString(), null)
+                    b.tvCfgStatus.text = "配置上传完成"
+                }
+            } catch (e: Exception) {
+                b.tvCfgStatus.text = "失败: ${e.message}"
             }
             b.pbCfgSync.visibility = View.GONE
-            if (result != null) {
-                if (download) { ruleStore.merge(result); renderKeywords(); renderRules() }
-                b.tvCfgStatus.text = if (download) "配置下载完成" else "配置上传完成"
-            } else b.tvCfgStatus.text = "操作失败"
         }
     }
 
