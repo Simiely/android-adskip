@@ -2,6 +2,7 @@ package com.simely.adskip.sync
 
 import android.util.Base64
 import android.util.Log
+import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -87,6 +88,79 @@ object GitHubSync {
                 conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
                 if (conn.responseCode !in 200..299) throw SyncException("HTTP ${conn.responseCode}", conn.responseCode)
                 true
+            } finally {
+                conn.disconnect()
+            }
+        }
+    }
+
+    /**
+     * 列出仓库目录内容，返回文件名列表。
+     */
+    fun listFolder(owner: String, repo: String, branch: String, path: String, token: String): List<Pair<String, String>> {
+        return withRetry("listFolder") {
+            val cleanPath = path.trimEnd('/')
+            val url = URL("https://api.github.com/repos/$owner/$repo/contents/${encodePath(cleanPath)}?ref=${encode(branch)}")
+            val conn = (url.openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                setRequestProperty("Authorization", "Bearer $token")
+                setRequestProperty("Accept", "application/vnd.github+json")
+                setRequestProperty("User-Agent", "AdSkip-Android")
+                connectTimeout = 15000
+                readTimeout = 15000
+            }
+            try {
+                if (conn.responseCode == 404) return@withRetry emptyList()
+                if (conn.responseCode !in 200..299) throw SyncException("HTTP ${conn.responseCode}", conn.responseCode)
+                val body = conn.inputStream.bufferedReader().use { it.readText() }
+                val arr = if (body.trimStart().startsWith("[")) JSONArray(body) else JSONArray().put(JSONObject(body))
+                val result = mutableListOf<Pair<String, String>>()
+                for (i in 0 until arr.length()) {
+                    val item = arr.getJSONObject(i)
+                    if (item.optString("type") == "file") {
+                        result.add(item.optString("name") to item.optString("download_url", ""))
+                    }
+                }
+                result
+            } finally {
+                conn.disconnect()
+            }
+        }
+    }
+
+    /** 验证 Token 是否有效（尝试获取用户信息） */
+    fun validateToken(token: String): Boolean {
+        return try {
+            val url = URL("https://api.github.com/user")
+            val conn = (url.openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                setRequestProperty("Authorization", "Bearer $token")
+                setRequestProperty("Accept", "application/vnd.github+json")
+                setRequestProperty("User-Agent", "AdSkip-Android")
+                connectTimeout = 10000
+                readTimeout = 10000
+            }
+            try {
+                conn.responseCode in 200..299
+            } finally {
+                conn.disconnect()
+            }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /** 下载原始内容（不走 API，用于公开文件），返回文件内容 */
+    fun downloadRawContent(url: String): String {
+        return withRetry("downloadRawContent") {
+            val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = 15000
+                readTimeout = 15000
+            }
+            try {
+                if (conn.responseCode !in 200..299) throw SyncException("HTTP ${conn.responseCode}", conn.responseCode)
+                conn.inputStream.bufferedReader().use { it.readText() }
             } finally {
                 conn.disconnect()
             }
