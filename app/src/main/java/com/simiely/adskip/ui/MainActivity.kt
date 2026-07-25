@@ -41,6 +41,12 @@ class MainActivity : AppCompatActivity() {
         binding.btnSettings.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
+        binding.btnShowCapsule.setOnClickListener {
+            val intent = Intent(this, KeepAliveService::class.java).apply {
+                action = KeepAliveService.ACTION_SHOW_CAPSULE
+            }
+            ContextCompat.startForegroundService(this, intent)
+        }
     }
 
     override fun onResume() {
