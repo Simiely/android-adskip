@@ -98,6 +98,26 @@ class MainActivity : AppCompatActivity() {
         refreshStats()
         renderKeywords()
         renderRules()
+
+        // 检查是否有自动关闭总开关的提示
+        showDisabledRuleNotice()
+    }
+
+    // ── 防死循环提示 ──
+    private fun showDisabledRuleNotice() {
+        val rule = secure.getDisabledRule()
+        if (rule.isEmpty()) return
+        secure.clearDisabledRule()
+        // 更新开关 UI
+        binding.switchMaster.isChecked = false
+        val parts = rule.split("|")
+        val pkgName = parts.getOrNull(0) ?: rule
+        val btnText = parts.getOrNull(1) ?: ""
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("总开关已自动关闭")
+            .setMessage("检测到应用 [$pkgName] 的按钮 [$btnText] 在 5 秒内触发了 3 次，为防止死循环已自动关闭总开关。\n\n如需恢复，请手动打开总开关。")
+            .setPositiveButton("知道了", null)
+            .show()
     }
 
     override fun onResume() {

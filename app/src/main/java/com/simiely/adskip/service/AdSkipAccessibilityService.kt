@@ -28,17 +28,18 @@ class AdSkipAccessibilityService : AccessibilityService() {
     private val lastClick = object : LinkedHashMap<String, Long>(100, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Long>?): Boolean {
             if (size <= MAX_COOLDOWN_ENTRIES) return false
-            // 如果最老的条目已过期（超过 COOLDOWN_MS * 10），移除它
             val expired = eldest != null &&
                     System.currentTimeMillis() - eldest.value > COOLDOWN_MS * 10
             if (!expired) {
-                // 被动清理所有过期条目
                 val now = System.currentTimeMillis()
                 entries.removeAll { now - it.value > COOLDOWN_MS * 10 }
             }
             return expired
         }
     }
+
+    /** 快速触发追踪：key → 最近触发时间戳列表，用于防死循环保护 */
+    private val rapidFireMap = mutableMapOf<String, MutableList<Long>>()
 
     override fun onCreate() {
         super.onCreate()
@@ -111,6 +112,17 @@ class AdSkipAccessibilityService : AccessibilityService() {
             val now = System.currentTimeMillis()
             if (now - (lastClick[key] ?: 0L) < COOLDOWN_MS) continue
             lastClick[key] = now
+
+            // 防死循环：5 秒内同一规则触发 3 次 → 关闭总开关
+            if (isRapidFire(key)) {
+                val s = secure ?: return
+                s.setMasterEnabled(false)
+                s.setDisabledRule(key)
+                // 清理快速触发记录，防止后续继续误判
+                rapidFireMap.clear()
+                return
+            }
+
             clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
             // 记录统计
             statsStore?.recordClick()
@@ -181,5 +193,18 @@ class AdSkipAccessibilityService : AccessibilityService() {
         private const val TAG = "AdSkipService"
         private const val COOLDOWN_MS = 800L
         private const val MAX_COOLDOWN_ENTRIES = 100
+        /** 5 秒内同一规则最多触发 3 次 */
+        private const val RAPID_FIRE_WINDOW_MS = 5000L
+        private const val RAPID_FIRE_MAX = 3
+    }
+
+    /** 检查同一规则是否在 5 秒内触发了 3 次 */
+    private fun isRapidFire(key: String): Boolean {
+        val now = System.currentTimeMillis()
+        val list = rapidFireMap.getOrPut(key) { mutableListOf() }
+        // 清理 5 秒前的记录
+        list.removeAll { now - it > RAPID_FIRE_WINDOW_MS }
+        list.add(now)
+        return list.size >= RAPID_FIRE_MAX
     }
 }

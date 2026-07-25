@@ -35,6 +35,11 @@ class SecurePrefs(context: Context) {
     fun getMasterEnabled(): Boolean = prefs.getBoolean(KEY_MASTER, true)
     fun setMasterEnabled(v: Boolean) = prefs.edit().putBoolean(KEY_MASTER, v).apply()
 
+    /** 防死循环保护：记录被自动关闭的规则指纹，下次打开主界面时展示提示 */
+    fun getDisabledRule(): String = prefs.getString(KEY_DISABLED_RULE, "") ?: ""
+    fun setDisabledRule(rule: String) = prefs.edit().putString(KEY_DISABLED_RULE, rule).apply()
+    fun clearDisabledRule() = prefs.edit().remove(KEY_DISABLED_RULE).apply()
+
     /** 关键词开关：关闭后仅用手动捕获规则（更省电） */
     fun getKeywordEnabled(): Boolean = prefs.getBoolean(KEY_KEYWORD, true)
     fun setKeywordEnabled(v: Boolean) = prefs.edit().putBoolean(KEY_KEYWORD, v).apply()
@@ -75,6 +80,7 @@ class SecurePrefs(context: Context) {
         private const val KEY_CFG_BRANCH = "cfg_branch"
         private const val KEY_CFG_PATH = "cfg_path"
         private const val KEY_CFG_TOKEN = "cfg_token"
+        private const val KEY_DISABLED_RULE = "disabled_rule"
 
         /** SHA-256 十六进制（用于密码比对，未加盐，个人工具足够） */
         fun hash(input: String): String {
