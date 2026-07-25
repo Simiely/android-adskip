@@ -35,6 +35,22 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        try {
+            onCreateInternal(savedInstanceState)
+        } catch (e: Exception) {
+            // 崩溃捕获：显示错误信息帮助定位
+            val msg = "${e.javaClass.simpleName}: ${e.message}\n\n${e.stackTrace.take(5).joinToString(\"\n\")}"
+            android.util.Log.e("AdSkipCrash", msg, e)
+            setContentView(android.widget.TextView(this).apply {
+                text = "AdSkip 启动崩溃\n\n$msg"
+                setTextColor(0xFFFF0000.toInt())
+                textSize = 12f
+                setPadding(32, 32, 32, 32)
+            })
+        }
+    }
+
+    private fun onCreateInternal(savedInstanceState: Bundle?) {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
