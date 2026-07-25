@@ -53,16 +53,25 @@ class AdSkipAccessibilityService : AccessibilityService() {
         val s = secure ?: return
         if (!s.getMasterEnabled()) return
 
-        val root = rootInActiveWindow ?: return
-        try {
-            if (AppState.isCapturing && event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED) {
+        // 捕获模式：只处理 TYPE_VIEW_CLICKED，用 event.source 而非 rootInActiveWindow
+        if (AppState.isCapturing) {
+            if (event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED) {
                 captureNode(event)
                 val callback = AppState.onCaptured
                 AppState.exitCapture()
                 callback?.invoke()
-                return
             }
-            if (AppState.isCapturing) return
+            return
+        }
+
+        // 普通模式：只处理窗口/内容变化事件，跳过 TYPE_VIEW_CLICKED
+        if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
+            event.eventType != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
+            return
+        }
+
+        val root = rootInActiveWindow ?: return
+        try {
             val pkg = root.packageName?.toString() ?: ""
             tryClick(root, pkg)
         } finally {
