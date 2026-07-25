@@ -24,25 +24,15 @@ class SecurePrefs(context: Context) {
 
     fun isPasswordSet(): Boolean = prefs.contains(KEY_PWD_HASH)
     fun getPasswordHash(): String = prefs.getString(KEY_PWD_HASH, "") ?: ""
-    fun setPasswordHash(hash: String) = prefs.edit().putString(KEY_PWD_HASH, hash).apply()
-
-    /** 第二个密码门：config 同步面板 */
-    fun isConfigPasswordSet(): Boolean = prefs.contains(KEY_CFG_PWD_HASH)
-    fun getConfigPasswordHash(): String = prefs.getString(KEY_CFG_PWD_HASH, "") ?: ""
-    fun setConfigPasswordHash(hash: String) = prefs.edit().putString(KEY_CFG_PWD_HASH, hash).apply()
 
     /** 全局总开关：关闭后即使无障碍已开启也停止自动跳过 */
     fun getMasterEnabled(): Boolean = prefs.getBoolean(KEY_MASTER, true)
     fun setMasterEnabled(v: Boolean) = prefs.edit().putBoolean(KEY_MASTER, v).apply()
 
-    /** 防死循环保护：记录被自动关闭的规则指纹，下次打开主界面时展示提示 */
-    fun getDisabledRule(): String = prefs.getString(KEY_DISABLED_RULE, "") ?: ""
-    fun setDisabledRule(rule: String) = prefs.edit().putString(KEY_DISABLED_RULE, rule).apply()
-    fun clearDisabledRule() = prefs.edit().remove(KEY_DISABLED_RULE).apply()
-
     /** 关键词开关：关闭后仅用手动捕获规则（更省电） */
     fun getKeywordEnabled(): Boolean = prefs.getBoolean(KEY_KEYWORD, true)
     fun setKeywordEnabled(v: Boolean) = prefs.edit().putBoolean(KEY_KEYWORD, v).apply()
+    fun setPasswordHash(hash: String) = prefs.edit().putString(KEY_PWD_HASH, hash).apply()
 
     fun getRepoOwner(): String = prefs.getString(KEY_OWNER, "") ?: ""
     fun setRepoOwner(v: String) = prefs.edit().putString(KEY_OWNER, v.trim()).apply()
@@ -53,18 +43,6 @@ class SecurePrefs(context: Context) {
     fun getRepoPath(): String = prefs.getString(KEY_PATH, "rules.json") ?: "rules.json"
     fun setRepoPath(v: String) = prefs.edit().putString(KEY_PATH, v.trim().ifEmpty { "rules.json" }).apply()
 
-    /** 配置同步（密码 123）：独立仓库配置 + 独立 Token */
-    fun getConfigOwner(): String = prefs.getString(KEY_CFG_OWNER, "") ?: ""
-    fun setConfigOwner(v: String) = prefs.edit().putString(KEY_CFG_OWNER, v.trim()).apply()
-    fun getConfigRepo(): String = prefs.getString(KEY_CFG_REPO, "") ?: ""
-    fun setConfigRepo(v: String) = prefs.edit().putString(KEY_CFG_REPO, v.trim()).apply()
-    fun getConfigBranch(): String = prefs.getString(KEY_CFG_BRANCH, "main") ?: "main"
-    fun setConfigBranch(v: String) = prefs.edit().putString(KEY_CFG_BRANCH, v.trim().ifEmpty { "main" }).apply()
-    fun getConfigPath(): String = prefs.getString(KEY_CFG_PATH, "") ?: ""
-    fun setConfigPath(v: String) = prefs.edit().putString(KEY_CFG_PATH, v.trim()).apply()
-    fun getConfigToken(): String = prefs.getString(KEY_CFG_TOKEN, "") ?: ""
-    fun setConfigToken(v: String) = prefs.edit().putString(KEY_CFG_TOKEN, v.trim()).apply()
-
     companion object {
         private const val KEY_TOKEN = "gh_token"
         private const val KEY_PWD_HASH = "pwd_hash"
@@ -74,13 +52,6 @@ class SecurePrefs(context: Context) {
         private const val KEY_REPO = "repo_name"
         private const val KEY_BRANCH = "repo_branch"
         private const val KEY_PATH = "repo_path"
-        private const val KEY_CFG_PWD_HASH = "cfg_pwd_hash"
-        private const val KEY_CFG_OWNER = "cfg_owner"
-        private const val KEY_CFG_REPO = "cfg_repo"
-        private const val KEY_CFG_BRANCH = "cfg_branch"
-        private const val KEY_CFG_PATH = "cfg_path"
-        private const val KEY_CFG_TOKEN = "cfg_token"
-        private const val KEY_DISABLED_RULE = "disabled_rule"
 
         /** SHA-256 十六进制（用于密码比对，未加盐，个人工具足够） */
         fun hash(input: String): String {

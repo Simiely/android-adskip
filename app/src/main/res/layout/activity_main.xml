@@ -11,7 +11,6 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- 状态卡片 -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -37,118 +36,47 @@
                     android:id="@+id/tv_status"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="8dp"
                     android:text="@string/status_stopped"
                     android:textColor="@color/text_secondary" />
-
-                <!-- 悬浮窗开关 -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-                    <TextView
-                        android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                        android:text="悬浮窗" android:textSize="16sp" android:textColor="@color/text_primary" />
-                    <androidx.appcompat.widget.SwitchCompat
-                        android:id="@+id/switch_capsule"
-                        android:layout_width="wrap_content" android:layout_height="wrap_content" />
-                </LinearLayout>
-
-                <!-- 总开关 -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-                    <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                        android:text="@string/switch_master" android:textSize="16sp" android:textColor="@color/text_primary" />
-                    <androidx.appcompat.widget.SwitchCompat
-                        android:id="@+id/switch_master"
-                        android:layout_width="wrap_content" android:layout_height="wrap_content" />
-                </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- 统计卡片 -->
-        <com.google.android.material.card.MaterialCardView
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_accessibility"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            app:cardCornerRadius="16dp"
-            app:cardBackgroundColor="@color/surface">
+            android:text="@string/btn_open_accessibility"
+            app:cornerRadius="12dp" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="16dp">
-
-                <LinearLayout
-                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                    android:orientation="vertical" android:gravity="center">
-                    <TextView android:id="@+id/tv_total_count"
-                        android:textSize="28sp" android:textStyle="bold" android:textColor="@color/text_primary" android:text="0" />
-                    <TextView android:text="总点击" android:textSize="12sp" android:textColor="@color/text_secondary" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                    android:orientation="vertical" android:gravity="center">
-                    <TextView android:id="@+id/tv_today_count"
-                        android:textSize="28sp" android:textStyle="bold" android:textColor="@color/text_primary" android:text="0" />
-                    <TextView android:text="今日" android:textSize="12sp" android:textColor="@color/text_secondary" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                    android:orientation="vertical" android:gravity="center">
-                    <TextView android:id="@+id/tv_usage_days"
-                        android:textSize="28sp" android:textStyle="bold" android:textColor="@color/text_primary" android:text="0" />
-                    <TextView android:text="使用天数" android:textSize="12sp" android:textColor="@color/text_secondary" />
-                </LinearLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- 权限设置 -->
-        <com.google.android.material.card.MaterialCardView
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_overlay"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            app:cardCornerRadius="16dp"
-            app:cardBackgroundColor="@color/surface">
+            android:text="@string/btn_open_overlay"
+            app:cornerRadius="12dp" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_battery"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_open_battery"
+            app:cornerRadius="12dp" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_accessibility"
-                    android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:text="@string/btn_open_accessibility" app:cornerRadius="12dp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_overlay"
-                    android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:text="@string/btn_open_overlay" app:cornerRadius="12dp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_battery"
-                    android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:text="@string/btn_open_battery" app:cornerRadius="12dp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- 规则设置 -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_settings"
             style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="@string/btn_open_settings" app:cornerRadius="12dp" />
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_open_settings"
+            app:cornerRadius="12dp" />
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="提示：澎湃 OS 3 需在「设置-应用设置-应用管理」里把本应用设为省电无限制、允许自启动，并在任务栏锁定。"
+            android:textSize="12sp"
+            android:textColor="@color/text_secondary" />
     </LinearLayout>
 </ScrollView>

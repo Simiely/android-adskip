@@ -1,16 +1,13 @@
 package com.simely.adskip.service
 
 import android.accessibilityservice.AccessibilityService
+import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import com.simely.adskip.AppState
 import com.simely.adskip.model.Rule
 import com.simely.adskip.store.RuleStore
-import com.simely.adskip.store.StatsStore
 import com.simely.adskip.util.SecurePrefs
-import com.simely.adskip.util.logd
-import com.simely.adskip.util.loge
-import com.simely.adskip.util.logi
 
 /**
  * 核心无障碍服务：事件驱动，零轮询。
@@ -23,33 +20,17 @@ class AdSkipAccessibilityService : AccessibilityService() {
 
     private var ruleStore: RuleStore? = null
     private var secure: SecurePrefs? = null
-    private var statsStore: StatsStore? = null
-    /** 冷却 Map：最多保留 100 条，超过后清理过期条目后再插入 */
-    private val lastClick = object : LinkedHashMap<String, Long>(100, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Long>?): Boolean {
-            if (size <= MAX_COOLDOWN_ENTRIES) return false
-            val expired = eldest != null &&
-                    System.currentTimeMillis() - eldest.value > COOLDOWN_MS * 10
-            if (!expired) {
-                val now = System.currentTimeMillis()
-                entries.removeAll { now - it.value > COOLDOWN_MS * 10 }
-            }
-            return expired
-        }
-    }
-
-    /** 快速触发追踪：key → 最近触发时间戳列表，用于防死循环保护 */
-    private val rapidFireMap = mutableMapOf<String, MutableList<Long>>()
+    private val lastClick = mutableMapOf<String, Long>()
+    private val COOLDOWN_MS = 800L
 
     override fun onCreate() {
         super.onCreate()
         try {
             ruleStore = RuleStore(this)
             secure = SecurePrefs(this)
-            statsStore = StatsStore(this)
-            logi { "Service created, rules loaded" }
         } catch (e: Exception) {
-            loge({ "Failed to init store/prefs" }, e)
+            Log.e(TAG, "Failed to init store/prefs", e)
+            // 降级运行：不崩溃，但不执行匹配（等待用户重启服务）
         }
     }
 
@@ -57,25 +38,15 @@ class AdSkipAccessibilityService : AccessibilityService() {
         val s = secure ?: return
         if (!s.getMasterEnabled()) return
 
-        // 捕获模式：只处理 TYPE_VIEW_CLICKED，用 event.source 而非 rootInActiveWindow
-        if (AppState.isCapturing) {
-            if (event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED) {
-                captureNode(event)
-                val callback = AppState.onCaptured
-                AppState.exitCapture()
-                callback?.invoke()
-            }
-            return
-        }
-
-        // 普通模式：只处理窗口/内容变化事件，跳过 TYPE_VIEW_CLICKED
-        if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
-            event.eventType != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
-            return
-        }
-
         val root = rootInActiveWindow ?: return
         try {
+            if (AppState.isCapturing && event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED) {
+                captureNode(event)
+                AppState.exitCapture()
+                AppState.onCaptured?.invoke()
+                return
+            }
+            if (AppState.isCapturing) return
             val pkg = root.packageName?.toString() ?: ""
             tryClick(root, pkg)
         } finally {
@@ -112,25 +83,7 @@ class AdSkipAccessibilityService : AccessibilityService() {
             val now = System.currentTimeMillis()
             if (now - (lastClick[key] ?: 0L) < COOLDOWN_MS) continue
             lastClick[key] = now
-
-            // 防死循环：5 秒内同一规则触发 3 次 → 关闭总开关
-            if (isRapidFire(key)) {
-                val s = secure ?: return
-                s.setMasterEnabled(false)
-                s.setDisabledRule(key)
-                // 清理快速触发记录，防止后续继续误判
-                rapidFireMap.clear()
-                return
-            }
-
             clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-            // 记录统计
-            statsStore?.recordClick()
-            statsStore?.addLog(
-                pkg = pkg,
-                text = clickable.text?.toString() ?: node.text?.toString() ?: "",
-                viewId = clickable.viewIdResourceName
-            )
             break
         }
     }
@@ -191,20 +144,5 @@ class AdSkipAccessibilityService : AccessibilityService() {
 
     companion object {
         private const val TAG = "AdSkipService"
-        private const val COOLDOWN_MS = 800L
-        private const val MAX_COOLDOWN_ENTRIES = 100
-        /** 5 秒内同一规则最多触发 3 次 */
-        private const val RAPID_FIRE_WINDOW_MS = 5000L
-        private const val RAPID_FIRE_MAX = 3
-    }
-
-    /** 检查同一规则是否在 5 秒内触发了 3 次 */
-    private fun isRapidFire(key: String): Boolean {
-        val now = System.currentTimeMillis()
-        val list = rapidFireMap.getOrPut(key) { mutableListOf() }
-        // 清理 5 秒前的记录
-        list.removeAll { now - it > RAPID_FIRE_WINDOW_MS }
-        list.add(now)
-        return list.size >= RAPID_FIRE_MAX
     }
 }

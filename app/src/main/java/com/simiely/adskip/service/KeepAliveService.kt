@@ -14,13 +14,10 @@ import androidx.core.app.NotificationCompat
 import com.simely.adskip.R
 import com.simely.adskip.float.FloatWindowManager
 import com.simely.adskip.ui.MainActivity
-import com.simely.adskip.util.logi
 
 /**
- * 前台保活服务：常驻通知 + 持有悬浮胶囊。
- * - 通知栏按钮：显示/隐藏悬浮窗、取消捕获
- * - 长按胶囊 → 隐藏
- * - 点击胶囊 → 进入捕获模式（通知栏出现「取消捕获」）
+ * 前台保活服务：常驻通知 + 持有悬浮胶囊，降低被 HyperOS 回收的概率。
+ * 配合系统白名单（省电无限制 / 自启动 / 任务栏锁定）效果最佳。
  */
 class KeepAliveService : Service() {
 
@@ -28,25 +25,22 @@ class KeepAliveService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        logi { "KeepAliveService starting" }
         floatManager = FloatWindowManager(this)
-        floatManager.onVisibilityChanged = { updateNotification() }
-        floatManager.onCaptureStateChanged = { updateNotification() }
-        startForegroundInternal()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(NOTIF_ID, buildNotification(),
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+        } else {
+            startForeground(NOTIF_ID, buildNotification())
+        }
         floatManager.showCapsule()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
-            ACTION_SHOW_CAPSULE -> floatManager.showCapsule()
-            ACTION_HIDE_CAPSULE -> floatManager.hideCapsuleAndNotify()
-            ACTION_CANCEL_CAPTURE -> floatManager.cancelCapture()
-        }
+        // 被杀后系统会尝试重建
         return START_STICKY
     }
 
     override fun onDestroy() {
-        logi { "KeepAliveService stopping" }
         floatManager.hideCapsule()
         stopForeground(STOP_FOREGROUND_REMOVE)
         super.onDestroy()
@@ -54,60 +48,27 @@ class KeepAliveService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    private fun startForegroundInternal() {
-        val notif = buildNotification()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(NOTIF_ID, notif, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
-        } else {
-            startForeground(NOTIF_ID, notif)
-        }
-    }
-
-    private fun updateNotification() {
-        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        nm.notify(NOTIF_ID, buildNotification())
-    }
-
     private fun buildNotification(): Notification {
         createChannel()
-        val visible = floatManager.isVisible()
-        val capturing = com.simely.adskip.AppState.isCapturing
-
-        val title = "AdSkip 运行中"
-        val text = if (capturing) "捕获模式中，点悬浮球可取消" else "监听界面并自动跳过广告"
-
-        val mainIntent = Intent(this, MainActivity::class.java)
-        val mainPi = PendingIntent.getActivity(
-            this, 0, mainIntent,
+        val intent = Intent(this, MainActivity::class.java)
+        val pi = PendingIntent.getActivity(
+            this, 0, intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
-
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(title)
-            .setContentText(text)
+            .setContentTitle("AdSkip 运行中")
+            .setContentText("监听界面并自动跳过广告")
             .setSmallIcon(R.drawable.ic_notify)
-            .setContentIntent(mainPi)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(pi)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
-            .apply {
-                if (capturing) {
-                    val cancelIntent = Intent(this@KeepAliveService, KeepAliveService::class.java).apply {
-                        action = ACTION_CANCEL_CAPTURE
-                    }
-                    val cancelPi = PendingIntent.getService(
-                        this@KeepAliveService, 2, cancelIntent,
-                        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-                    )
-                    addAction(0, "取消捕获", cancelPi)
-                }
-            }
             .build()
     }
 
     private fun createChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val chan = NotificationChannel(
-                CHANNEL_ID, "AdSkip 保活", NotificationManager.IMPORTANCE_DEFAULT
+                CHANNEL_ID, "AdSkip 保活", NotificationManager.IMPORTANCE_LOW
             ).apply {
                 description = "保持跳过广告服务后台运行"
                 setShowBadge(false)
@@ -120,8 +81,5 @@ class KeepAliveService : Service() {
     companion object {
         const val NOTIF_ID = 1001
         const val CHANNEL_ID = "adskip_keepalive"
-        const val ACTION_SHOW_CAPSULE = "com.simely.adskip.SHOW_CAPSULE"
-        const val ACTION_HIDE_CAPSULE = "com.simely.adskip.HIDE_CAPSULE"
-        const val ACTION_CANCEL_CAPTURE = "com.simely.adskip.CANCEL_CAPTURE"
     }
 }

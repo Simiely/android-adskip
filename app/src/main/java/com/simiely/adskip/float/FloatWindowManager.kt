@@ -16,9 +16,8 @@ import com.simely.adskip.R
 /**
  * 悬浮胶囊管理：
  * - 常驻 TYPE_APPLICATION_OVERLAY 小圆点
- * - 点击 → 进入捕获模式（胶囊 FLAG_NOT_TOUCHABLE，所有触摸穿透到 App）
- * - 捕获取消靠通知栏「取消捕获」按钮（Android 12+ 信任触摸限制无法用 FLAG_NOT_TOUCH_MODAL）
- * - 长按 → 隐藏胶囊
+ * - 点击胶囊 → 进入/退出“手动捕获模式”
+ * - 捕获模式下显示全屏半透明提示遮罩（穿透点击，真实点击由无障碍捕获）
  */
 class FloatWindowManager(private val context: Context) {
 
@@ -49,35 +48,16 @@ class FloatWindowManager(private val context: Context) {
     private var downX = 0f
     private var downY = 0f
     private var moved = false
-    private var warnedNoOverlay = false
-    var onVisibilityChanged: ((Boolean) -> Unit)? = null
-    /** 捕获状态变化回调（用于 KeepAliveService 更新通知栏） */
-    var onCaptureStateChanged: ((Boolean) -> Unit)? = null
 
     fun canShow(): Boolean = Settings.canDrawOverlays(context)
-    fun isVisible(): Boolean = capsuleView != null
 
     fun showCapsule() {
-        if (!canShow()) {
-            if (!warnedNoOverlay) {
-                warnedNoOverlay = true
-                Toast.makeText(context, "请开启悬浮窗权限以显示悬浮胶囊", Toast.LENGTH_LONG).show()
-            }
-            return
-        }
+        if (!canShow()) return
         if (capsuleView != null) return
-        warnedNoOverlay = false
         val view = LayoutInflater.from(context).inflate(R.layout.floating_capsule, null)
         view.setOnTouchListener(::onCapsuleTouch)
         capsuleView = view
         wm.addView(view, capsuleParams)
-        onVisibilityChanged?.invoke(true)
-    }
-
-    fun hideCapsuleAndNotify() {
-        hideCapsule()
-        onVisibilityChanged?.invoke(false)
-        Toast.makeText(context, "悬浮窗已隐藏，点击通知栏可重新显示", Toast.LENGTH_SHORT).show()
     }
 
     fun hideCapsule() {
@@ -92,21 +72,18 @@ class FloatWindowManager(private val context: Context) {
                 downX = event.rawX
                 downY = event.rawY
                 moved = false
-                return true
             }
             MotionEvent.ACTION_MOVE -> {
                 val dx = event.rawX - downX
                 val dy = event.rawY - downY
                 if (abs(dx) > 8 || abs(dy) > 8) moved = true
-                if (moved) {
-                    capsuleParams.x = (capsuleParams.x + dx.toInt()).coerceAtLeast(0)
-                    capsuleParams.y = (capsuleParams.y + dy.toInt()).coerceAtLeast(0)
-                    downX = event.rawX
-                    downY = event.rawY
-                    wm.updateViewLayout(v, capsuleParams)
-                }
+                capsuleParams.x = (capsuleParams.x + dx.toInt()).coerceAtLeast(0)
+                capsuleParams.y = (capsuleParams.y + dy.toInt()).coerceAtLeast(0)
+                downX = event.rawX
+                downY = event.rawY
+                wm.updateViewLayout(v, capsuleParams)
             }
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+            MotionEvent.ACTION_UP -> {
                 if (!moved) onCapsuleTap()
             }
         }
@@ -121,44 +98,22 @@ class FloatWindowManager(private val context: Context) {
         }
     }
 
-    fun enterCapture() {
-        AppState.enterCapture(
-            onCaptured = {
-                exitCaptureMode()
-                Toast.makeText(context, R.string.toast_captured, Toast.LENGTH_SHORT).show()
-            },
-            onCancelled = { exitCaptureMode() }
-        )
-
-        // 不修改胶囊 flag：胶囊 48dp 在左上角，不挡按钮
-        // 提示遮罩 FLAG_NOT_TOUCHABLE 穿透，触摸可达 App 按钮
-        capsuleView?.let { v ->
-            v.findViewById<View>(R.id.capsule)?.let {
-                it.setBackgroundResource(R.drawable.bg_capsule_capture)
-            }
+    private fun enterCapture() {
+        AppState.enterCapture()
+        AppState.onCaptured = {
+            hideHint()
+            Toast.makeText(context, R.string.toast_captured, Toast.LENGTH_SHORT).show()
         }
-
+        AppState.onCaptureCancelled = { hideHint() }
         if (hintView == null) {
             hintView = LayoutInflater.from(context).inflate(R.layout.capture_hint, null)
             wm.addView(hintView, hintParams)
         }
-
-        onCaptureStateChanged?.invoke(true)
     }
 
-    fun cancelCapture() {
+    private fun cancelCapture() {
         AppState.exitCapture()
-        exitCaptureMode()
-    }
-
-    private fun exitCaptureMode() {
-        capsuleView?.let { v ->
-            v.findViewById<View>(R.id.capsule)?.let {
-                it.setBackgroundResource(R.drawable.bg_capsule)
-            }
-        }
         hideHint()
-        onCaptureStateChanged?.invoke(false)
     }
 
     private fun hideHint() {
