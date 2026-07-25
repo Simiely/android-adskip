@@ -35,7 +35,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        try {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -102,16 +101,6 @@ class MainActivity : AppCompatActivity() {
 
         // 检查是否有自动关闭总开关的提示
         showDisabledRuleNotice()
-        } catch (e: Exception) {
-            val msg = "${e.javaClass.simpleName}: ${e.message}\n\n${e.stackTrace.take(5).joinToString("\n")}"
-            android.util.Log.e("AdSkipCrash", msg, e)
-            setContentView(android.widget.TextView(this).apply {
-                text = "AdSkip 启动崩溃\n\n$msg"
-                setTextColor(0xFFFF0000.toInt())
-                textSize = 12f
-                setPadding(32, 32, 32, 32)
-            })
-        }
     }
 
     // ── 防死循环提示 ──
