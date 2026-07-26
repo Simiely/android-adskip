@@ -1,4 +1,4 @@
-name: Build & Release APK
+name: Build and Release APK
 
 on:
   push:
@@ -10,68 +10,20 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v3
         with:
           api-level: 34
           build-tools: 34.0.0
-
-      - name: Grant gradlew permission
-        run: chmod +x gradlew
-
-      - name: Unlock keystore
-        run: unzip -P "${{ secrets.ZIP_PASSWORD }}" adskip-keystore.zip
-
-      - name: Build Release APK
-        run: ./gradlew assembleRelease -PKEYSTORE_FILE=adskip.jks -PKEYSTORE_PASSWORD="${{ secrets.KEYSTORE_PASSWORD }}" -PKEY_ALIAS="${{ secrets.KEY_ALIAS }}"
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+      - run: chmod +x gradlew
+      - run: unzip -P "${{ secrets.ZIP_PASSWORD }}" adskip-keystore.zip
+      - run: ./gradlew assembleRelease -PKEYSTORE_FILE=adskip.jks -PKEYSTORE_PASSWORD="${{ secrets.KEYSTORE_PASSWORD }}" -PKEY_ALIAS="${{ secrets.KEY_ALIAS }}"
+      - run: find app/build/outputs -name "*.apk" -ls
+      - uses: actions/upload-artifact@v4
         with:
           name: app-release
-          path: app/build/outputs/apk/release/app-release.apk
-
-  release:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: app-release
-
-      - name: Rename for release
-        run: mv app-release.apk AdSkip-v${{ github.ref_name }}.apk
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: AdSkip-v${{ github.ref_name }}.apk
-          name: ${{ github.ref_name }}
-          body: |
-            ## AdSkip ${{ github.ref_name }}
-
-            🔑 隐藏菜单默认密码：**12345678**
-
-            ### 功能
-            - 内置关键词 + 悬浮胶囊手动捕获
-            - 关键词开关（关掉省电）
-            - 全局总开关 / 规则云同步 / 前台保活
-            - 固定签名（Release APK 可覆盖安装）
-
-            ### 首次使用
-            1. 装 APK → 开启无障碍 → 开悬浮窗 → 电池无限制
-            2. 设置页底部输入 **12345678** 解锁隐藏菜单
-
-            https://github.com/Simiely/android-adskip
-          token: ${{ secrets.GITHUB_TOKEN }}
+          path: app/build/outputs/apk/release/*.apk

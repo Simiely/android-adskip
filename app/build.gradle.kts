@@ -5,39 +5,41 @@ plugins {
 
 android {
     namespace = "com.simely.adskip"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.simely.adskip"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
     }
 
-    buildTypes {
-        release {
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-    }
-
-    // 签名：仅当 CI 传入 KEYSTORE_FILE 属性时启用（本地调试仍用 debug 签名）
+    // 签名：仅当 CI 传入 KEYSTORE_FILE 属性时启用
     val ks = project.findProperty("KEYSTORE_FILE") as? String
     if (!ks.isNullOrEmpty()) {
         signingConfigs {
             create("release") {
                 storeFile = rootProject.file(ks)
-                storePassword = project.findProperty("KEYSTORE_PASSWORD") as? String ?: ""
-                keyAlias = project.findProperty("KEY_ALIAS") as? String ?: "adskip"
-                keyPassword = project.findProperty("KEYSTORE_PASSWORD") as? String ?: ""
+                storePassword = project.findProperty("KEYSTORE_PASSWORD") as? String
+                keyAlias = project.findProperty("KEY_ALIAS") as? String
+                keyPassword = project.findProperty("KEYSTORE_PASSWORD") as? String
             }
         }
-        buildTypes.getByName("release").signingConfig = signingConfigs.getByName("release")
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            isShrinkResources = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            if (!ks.isNullOrEmpty()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
     }
 
     compileOptions {

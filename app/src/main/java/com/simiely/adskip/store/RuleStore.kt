@@ -59,6 +59,12 @@ class RuleStore(context: Context) {
         saveRules(getRules().filter { it.fingerprint() != fingerprint })
     }
 
+    fun updateRuleText(fingerprint: String, newText: String) {
+        saveRules(getRules().map { if (it.fingerprint() == fingerprint) it.copy(text = newText) else it })
+    }
+
+    fun clear() { saveRules(emptyList()) }
+
     /** 导出完整集合（含默认关键词），用于上传 */
     fun exportSet(): RuleSet = RuleSet(getKeywords(), getRules())
 
@@ -83,9 +89,45 @@ class RuleStore(context: Context) {
         prefs.edit().putString(KEY_RULES_JSON, json).apply()
     }
 
+    // ── 屏蔽规则（优先级最高，匹配到的按钮不点）──
+
+    /** 屏蔽指纹分隔符（\u0000 不会出现在包名/文本中） */
+    private val BLOCK_SEP = "\u0000"
+
+    /** 检查某个按钮是否被屏蔽（精确字段匹配） */
+    fun isBlocked(pkg: String, text: String?, viewId: String?): Boolean {
+        val blocked = getBlockedSet()
+        if (blocked.isEmpty()) return false
+        if (pkg.isEmpty()) return false
+        return blocked.any { bf ->
+            val parts = bf.split(BLOCK_SEP)
+            if (parts.size < 3) return@any false
+            if (parts[0] != pkg) return@any false
+            if (!viewId.isNullOrEmpty() && parts[1] == viewId) return@any true
+            if (!text.isNullOrEmpty() && parts[2] == text) return@any true
+            false
+        }
+    }
+
+    fun addBlocked(pkg: String, text: String, viewId: String) {
+        val fp = listOf(pkg, viewId.ifEmpty { "" }, text).joinToString(BLOCK_SEP)
+        val set = getBlockedSet().toMutableSet()
+        set.add(fp)
+        prefs.edit().putStringSet(KEY_BLOCKED, set).apply()
+    }
+
+    fun removeBlocked(fingerprint: String) {
+        val set = getBlockedSet().toMutableSet()
+        set.remove(fingerprint)
+        prefs.edit().putStringSet(KEY_BLOCKED, set).apply()
+    }
+
+    fun getBlockedSet(): Set<String> = prefs.getStringSet(KEY_BLOCKED, emptySet()) ?: emptySet()
+
     companion object {
         private const val KEY_USER_KEYWORDS = "user_keywords"
         private const val KEY_RULES_JSON = "rules_json"
+        private const val KEY_BLOCKED = "blocked"
         private val DEFAULT_KEYWORDS = setOf(
             "跳过",
             "跳过广告",

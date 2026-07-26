@@ -1,0 +1,12 @@
+<resources>
+    <color name="pink">#FB7299</color>
+    <color name="pink_dark">#C8548A</color>
+    <color name="pink_light">#3D1A2A</color>
+    <color name="bg">#0D0D0D</color>
+    <color name="surface">#1C1C1E</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#8E8E93</color>
+    <color name="text_tertiary">#636366</color>
+    <color name="text_on_color">#FFFFFF</color>
+    <color name="ic_launcher_background">#FB7299</color>
+</resources>

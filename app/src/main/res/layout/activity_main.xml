@@ -1,82 +1,415 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@color/bg"
-    android:padding="16dp">
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@color/bg" android:padding="12dp"
+    android:paddingBottom="120dp" android:clipToPadding="false"
+    android:fitsSystemWindows="true">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
 
+        <!-- 状态卡片 -->
         <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            app:cardCornerRadius="16dp"
-            app:cardBackgroundColor="@color/surface">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/title_main"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/text_primary" />
-
-                <TextView
-                    android:id="@+id/tv_status"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/status_stopped"
-                    android:textColor="@color/text_secondary" />
+            android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="14dp"
+            app:cardCornerRadius="12dp" app:cardElevation="0dp" app:strokeWidth="0.5dp" app:strokeColor="@color/surface">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:padding="14dp" android:gravity="center_vertical">
+                <View android:id="@+id/v_status_icon" android:layout_width="36dp" android:layout_height="36dp"
+                    android:background="@drawable/bg_status_on" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="10dp">
+                    <TextView android:id="@+id/tv_status_title" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:textSize="14sp" android:text="服务运行中" android:textColor="@color/text_primary" android:fontFamily="sans-serif-medium" />
+                    <TextView android:id="@+id/tv_status_sub" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:textSize="12sp" android:text="无障碍服务已开启" android:textColor="@color/text_secondary" />
+                </LinearLayout>
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:gravity="center_vertical" android:orientation="horizontal">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="悬浮窗" android:textSize="12sp" android:textColor="@color/text_secondary" android:layout_marginEnd="6dp" />
+                    <androidx.appcompat.widget.SwitchCompat android:id="@+id/switch_capsule"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_accessibility"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/btn_open_accessibility"
-            app:cornerRadius="12dp" />
+        <!-- 统计网格 -->
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:layout_marginBottom="8dp">
+            <com.google.android.material.card.MaterialCardView android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:layout_marginEnd="4dp" app:cardCornerRadius="8dp" app:cardElevation="0dp"
+                app:strokeWidth="0.5dp" app:strokeColor="@color/surface">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="vertical" android:gravity="center" android:padding="12dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="总点击" android:textSize="10sp" android:textColor="@color/text_secondary" />
+                    <TextView android:id="@+id/tv_total_count" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:textSize="22sp" android:text="-" android:textColor="@color/text_primary"
+                        android:fontFamily="sans-serif-medium" android:layout_marginVertical="2dp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+            <com.google.android.material.card.MaterialCardView android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:layout_marginHorizontal="4dp" app:cardCornerRadius="8dp" app:cardElevation="0dp"
+                app:strokeWidth="0.5dp" app:strokeColor="@color/surface">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="vertical" android:gravity="center" android:padding="12dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="今日" android:textSize="10sp" android:textColor="@color/text_secondary" />
+                    <TextView android:id="@+id/tv_today_count" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:textSize="22sp" android:text="-" android:textColor="@color/text_primary"
+                        android:fontFamily="sans-serif-medium" android:layout_marginVertical="2dp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+            <com.google.android.material.card.MaterialCardView android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:layout_marginStart="4dp" app:cardCornerRadius="8dp" app:cardElevation="0dp"
+                app:strokeWidth="0.5dp" app:strokeColor="@color/surface">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="vertical" android:gravity="center" android:padding="12dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="运行天数" android:textSize="10sp" android:textColor="@color/text_secondary" />
+                    <TextView android:id="@+id/tv_usage_days" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:textSize="22sp" android:text="-" android:textColor="@color/text_primary"
+                        android:fontFamily="sans-serif-medium" android:layout_marginVertical="2dp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_overlay"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/btn_open_overlay"
-            app:cornerRadius="12dp" />
+        <!-- 操作按钮 2x2 -->
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:layout_marginBottom="6dp">
+            <com.google.android.material.button.MaterialButton android:id="@+id/btn_share"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                android:text="分享统计" android:textSize="14sp" app:cornerRadius="8dp"
+                app:strokeWidth="0.5dp" android:layout_marginEnd="4dp" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/btn_clear_stats"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                android:text="清空统计" android:textSize="14sp" app:cornerRadius="8dp"
+                android:textColor="@color/pink" app:strokeColor="@color/pink"
+                app:strokeWidth="0.5dp" android:layout_marginStart="4dp" />
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:layout_marginBottom="14dp">
+            <com.google.android.material.button.MaterialButton android:id="@+id/btn_restart"
+                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                android:text="重启服务" android:textSize="14sp" app:cornerRadius="8dp"
+                android:layout_marginEnd="4dp" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/btn_exit"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                android:text="退出" android:textSize="14sp" app:cornerRadius="8dp"
+                android:textColor="@color/pink" app:strokeColor="@color/pink" app:strokeWidth="0.5dp" android:layout_marginStart="4dp" />
+        </LinearLayout>
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_battery"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/btn_open_battery"
-            app:cornerRadius="12dp" />
+        <!-- 最近点击 -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="12dp"
+            app:cardCornerRadius="12dp" app:cardElevation="0dp" app:strokeWidth="0.5dp" app:strokeColor="@color/surface">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                <LinearLayout android:id="@+id/header_logs"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:gravity="center_vertical" android:orientation="horizontal" android:padding="12dp"
+                    android:background="?attr/selectableItemBackground">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="最近点击" android:textSize="14sp" android:textColor="@color/text_primary"
+                            android:fontFamily="sans-serif-medium" />
+                    </LinearLayout>
+                    <TextView android:id="@+id/arrow_logs" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="-" android:textSize="16sp" android:textColor="@color/text_secondary" />
+                </LinearLayout>
+                <LinearLayout android:id="@+id/list_logs" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_settings"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/btn_open_settings"
-            app:cornerRadius="12dp" />
+        <!-- 规则与设置 -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="12dp"
+            app:cardCornerRadius="12dp" app:cardElevation="0dp" app:strokeWidth="0.5dp" app:strokeColor="@color/surface">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"
+                android:paddingHorizontal="12dp" android:paddingVertical="8dp">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="提示：澎湃 OS 3 需在「设置-应用设置-应用管理」里把本应用设为省电无限制、允许自启动，并在任务栏锁定。"
-            android:textSize="12sp"
-            android:textColor="@color/text_secondary" />
+                <!-- 总开关 -->
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:gravity="center_vertical" android:orientation="horizontal" android:paddingVertical="6dp">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/switch_master" android:textSize="15sp" android:textColor="@color/text_primary"
+                            android:fontFamily="sans-serif-medium" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="关闭后停止自动跳过" android:textSize="11sp" android:textColor="@color/text_secondary" />
+                    </LinearLayout>
+                    <androidx.appcompat.widget.SwitchCompat android:id="@+id/switch_master"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                </LinearLayout>
+
+                <!-- 关键词匹配 (子目录) -->
+                <LinearLayout android:id="@+id/header_keywords"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:gravity="center_vertical" android:orientation="horizontal" android:paddingVertical="6dp"
+                    android:background="?attr/selectableItemBackground">
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:text="关键词匹配" android:textSize="14sp"
+                        android:textColor="@color/text_primary" android:fontFamily="sans-serif-medium" />
+                    <TextView android:id="@+id/arrow_kw" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="-" android:textSize="16sp" android:textColor="@color/text_secondary" />
+                </LinearLayout>
+                <LinearLayout android:id="@+id/panel_keywords"
+                    android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:gravity="center_vertical" android:orientation="horizontal" android:paddingBottom="4dp">
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                            android:text="@string/switch_keyword" android:textSize="13sp" android:textColor="@color/text_primary" />
+                        <androidx.appcompat.widget.SwitchCompat android:id="@+id/switch_keyword"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:paddingBottom="4dp">
+                        <EditText android:id="@+id/et_keyword"
+                            android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                            android:hint="@string/hint_add_keyword" android:inputType="text"
+                            android:minHeight="44dp" android:textSize="14sp" />
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_add_keyword"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/btn_add" android:textSize="14sp" app:cornerRadius="6dp" android:minHeight="44dp" />
+                    </LinearLayout>
+                    <LinearLayout android:id="@+id/list_keywords"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:paddingBottom="4dp" />
+                </LinearLayout>
+
+                <!-- 手动捕获 (子目录) -->
+                <LinearLayout android:id="@+id/header_capture"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:gravity="center_vertical" android:orientation="horizontal" android:paddingVertical="6dp"
+                    android:background="?attr/selectableItemBackground">
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:text="手动捕获" android:textSize="14sp"
+                        android:textColor="@color/text_primary" android:fontFamily="sans-serif-medium" />
+                    <TextView android:id="@+id/arrow_cap" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="-" android:textSize="16sp" android:textColor="@color/text_secondary" />
+                </LinearLayout>
+                <LinearLayout android:id="@+id/panel_capture"
+                    android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                    <LinearLayout android:id="@+id/rule_groups"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                    <com.google.android.material.button.MaterialButton android:id="@+id/btn_clear_rules"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="清空所有规则" android:textSize="13sp" android:textColor="@color/pink" android:minHeight="44dp" />
+                </LinearLayout>
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- 应用过滤 -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="12dp"
+            app:cardCornerRadius="12dp" app:cardElevation="0dp" app:strokeWidth="0.5dp" app:strokeColor="@color/surface">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                <LinearLayout android:id="@+id/header_filter"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:gravity="center_vertical" android:orientation="horizontal" android:padding="12dp"
+                    android:background="?attr/selectableItemBackground">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="应用过滤" android:textSize="14sp" android:textColor="@color/text_primary"
+                            android:fontFamily="sans-serif-medium" />
+                        <TextView android:id="@+id/tv_filter_hint" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="控制哪些应用执行跳过" android:textSize="11sp" android:textColor="@color/text_secondary" />
+                    </LinearLayout>
+                    <androidx.appcompat.widget.SwitchCompat android:id="@+id/switch_filter"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp" />
+                    <TextView android:id="@+id/arrow_filter" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="-" android:textSize="16sp" android:textColor="@color/text_secondary" />
+                </LinearLayout>
+                <LinearLayout android:id="@+id/panel_filter"
+                    android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:paddingHorizontal="12dp" android:paddingTop="4dp">
+                        <TextView android:id="@+id/btn_mode_black"
+                            android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                            android:gravity="center" android:text="黑名单模式" android:textSize="14sp"
+                            android:padding="10dp" android:background="@drawable/bg_chip_selected"
+                            android:textColor="@color/text_primary" />
+                        <TextView android:id="@+id/btn_mode_white"
+                            android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                            android:gravity="center" android:text="白名单模式" android:textSize="14sp"
+                            android:padding="10dp" android:background="@drawable/bg_chip_normal"
+                            android:textColor="@color/text_secondary" />
+                    </LinearLayout>
+                    <TextView android:id="@+id/tv_mode_hint"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="黑名单���对名单外的所有应用生效" android:textSize="10sp"
+                        android:textColor="@color/text_secondary" android:paddingHorizontal="12dp" android:paddingBottom="8dp" />
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:paddingHorizontal="12dp" android:paddingBottom="8dp">
+                        <EditText android:id="@+id/et_filter_pkg"
+                            android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                            android:hint="搜索应用或点 + 选择" android:inputType="text"
+                            android:minHeight="44dp" android:textSize="14sp" />
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_add_filter"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="添加" android:textSize="14sp" app:cornerRadius="6dp" android:minHeight="44dp" />
+                    </LinearLayout>
+                    <LinearLayout android:id="@+id/list_filters"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="vertical" android:paddingHorizontal="12dp" android:paddingBottom="8dp" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- 权限设置 -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="12dp"
+            app:cardCornerRadius="12dp" app:cardElevation="0dp" app:strokeWidth="0.5dp" app:strokeColor="@color/surface">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                <LinearLayout android:id="@+id/header_permission"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:gravity="center_vertical" android:orientation="horizontal" android:padding="12dp"
+                    android:background="?attr/selectableItemBackground">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="权限设置" android:textSize="14sp" android:textColor="@color/text_primary"
+                            android:fontFamily="sans-serif-medium" />
+                    </LinearLayout>
+                    <TextView android:id="@+id/arrow_perm" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="-" android:textSize="16sp" android:textColor="@color/text_secondary" />
+                </LinearLayout>
+                <LinearLayout android:id="@+id/panel_permission"
+                    android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                    <com.google.android.material.button.MaterialButton android:id="@+id/btn_accessibility"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:text="无障碍服务" android:textSize="15sp" app:cornerRadius="0dp"
+                        android:gravity="start|center_vertical" android:layout_marginHorizontal="12dp" android:minHeight="48dp" />
+                    <com.google.android.material.button.MaterialButton android:id="@+id/btn_overlay"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:text="悬浮窗权限" android:textSize="15sp" app:cornerRadius="0dp"
+                        android:gravity="start|center_vertical" android:layout_marginHorizontal="12dp" android:minHeight="48dp" />
+                    <com.google.android.material.button.MaterialButton android:id="@+id/btn_battery"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:text="电池白名单" android:textSize="15sp" app:cornerRadius="0dp"
+                        android:gravity="start|center_vertical" android:layout_marginHorizontal="12dp"
+                        android:minHeight="48dp" android:layout_marginBottom="8dp" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- 同步与配置 -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="12dp"
+            app:cardCornerRadius="12dp" app:cardElevation="0dp" app:strokeWidth="0.5dp" app:strokeColor="@color/surface">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                <LinearLayout android:id="@+id/header_hidden"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:gravity="center_vertical" android:orientation="horizontal" android:padding="12dp"
+                    android:background="?attr/selectableItemBackground">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="同步与配置" android:textSize="14sp" android:textColor="@color/text_primary"
+                            android:fontFamily="sans-serif-medium" />
+                    </LinearLayout>
+                    <TextView android:id="@+id/arrow_hid" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="+" android:textSize="16sp" android:textColor="@color/text_secondary" />
+                </LinearLayout>
+                <LinearLayout android:id="@+id/panel_hidden"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="vertical" android:visibility="gone" android:paddingHorizontal="12dp" android:paddingBottom="12dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:paddingBottom="4dp">
+                        <EditText android:id="@+id/et_password"
+                            android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                            android:hint="输入密码解锁" android:inputType="text"
+                            android:minHeight="44dp" android:textSize="14sp" />
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_unlock"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="解锁" android:textSize="14sp" app:cornerRadius="6dp" android:minHeight="44dp" />
+                    </LinearLayout>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="密码 123：配置同步 / 12345678：规则同步" android:textSize="11sp"
+                        android:textColor="@color/text_secondary" android:paddingBottom="4dp" />
+                    <LinearLayout android:id="@+id/sync_panel"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="vertical" android:visibility="gone">
+                        <EditText android:id="@+id/et_repo_owner" android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:hint="@string/hint_repo_owner" android:inputType="text"
+                            android:textSize="14sp" android:minHeight="44dp" />
+                        <EditText android:id="@+id/et_repo_name" android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:hint="@string/hint_repo_name" android:inputType="text"
+                            android:textSize="14sp" android:minHeight="44dp" />
+                        <EditText android:id="@+id/et_repo_branch" android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:hint="@string/hint_repo_branch" android:inputType="text"
+                            android:textSize="14sp" android:minHeight="44dp" />
+                        <EditText android:id="@+id/et_repo_path" android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:hint="@string/hint_repo_path" android:inputType="text"
+                            android:textSize="14sp" android:minHeight="44dp" />
+                        <EditText android:id="@+id/et_token" android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:hint="@string/hint_token" android:inputType="textVisiblePassword"
+                            android:textSize="14sp" android:minHeight="44dp" />
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:orientation="horizontal">
+                            <com.google.android.material.button.MaterialButton android:id="@+id/btn_download"
+                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                                android:text="@string/btn_download" android:textSize="14sp" app:cornerRadius="6dp" />
+                            <com.google.android.material.button.MaterialButton android:id="@+id/btn_upload"
+                                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                                android:layout_marginStart="4dp" android:text="@string/btn_upload" android:textSize="14sp" app:cornerRadius="6dp" />
+                        </LinearLayout>
+                        <ProgressBar android:id="@+id/pb_sync" style="?android:attr/progressBarStyleHorizontal"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:indeterminate="true" android:visibility="gone" />
+                        <TextView android:id="@+id/tv_sync_status" android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:textColor="@color/text_secondary" android:textSize="11sp" />
+                    </LinearLayout>
+                    <LinearLayout android:id="@+id/cfg_panel"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="vertical" android:visibility="gone">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:text="仓库：Simiely/android-adskip -> configs/"
+                            android:textSize="11sp" android:textColor="@color/text_secondary" />
+                        <EditText android:id="@+id/et_cfg_token" android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:hint="GitHub Token" android:inputType="textVisiblePassword"
+                            android:textSize="14sp" android:minHeight="44dp" />
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:orientation="horizontal">
+                            <com.google.android.material.button.MaterialButton android:id="@+id/btn_cfg_download"
+                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                                android:text="下载配置" android:textSize="14sp" app:cornerRadius="6dp" />
+                            <com.google.android.material.button.MaterialButton android:id="@+id/btn_cfg_upload"
+                                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                                android:layout_marginStart="4dp" android:text="上传配置" android:textSize="14sp" app:cornerRadius="6dp" />
+                        </LinearLayout>
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_cfg_update_token"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:text="更新 Token" android:textSize="14sp" app:cornerRadius="6dp" />
+                        <ProgressBar android:id="@+id/pb_cfg_sync" style="?android:attr/progressBarStyleHorizontal"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:indeterminate="true" android:visibility="gone" />
+                        <TextView android:id="@+id/tv_cfg_status" android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:textColor="@color/text_secondary" android:textSize="11sp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="HyperOS：省电策略→无限制 | 自启动→开启 | 多任务→锁定"
+            android:textSize="11sp" android:textColor="@color/text_secondary"
+            android:gravity="center" android:layout_marginTop="8dp" android:paddingBottom="48dp" />
     </LinearLayout>
 </ScrollView>

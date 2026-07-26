@@ -1,105 +1,61 @@
-# AdSkip —— 澎湃 OS 3 跳过广告工具
+# AdSkip — Android 智能广告跳过工具
 
-基于 **无障碍服务（AccessibilityService）+ 悬浮窗手动捕获 + 规则 GitHub 云同步**。
+基于 Android 无障碍服务（AccessibilityService）的广告跳过工具，支持关键词自动匹配和手动捕获规则，无需 Root 权限。
 
-> 无需 root、无需 ADB。事件驱动、零轮询。关键词可关闭以省电。
+## 核心功能
 
-## 快速下载
+- **关键词匹配**：内置"跳过/跳过广告/关闭广告"等默认词，自动搜索并点击
+- **手动捕获**：悬浮球一键进入捕获模式，点击 App 内按钮即生成规则
+- **按 App 隔离**：手动捕获的规则只对当前 App 生效，互不干扰
+- **黑/白名单**：独立过滤开关，可选择黑名单或白名单模式，捕获规则自动加入名单
+- **屏蔽按钮**：历史记录中可屏蔽特定按钮，被屏蔽的按钮永不点击（优先级最高）
+- **悬浮窗**：可拖动胶囊，点击进入捕获模式，长按打��主界面
+- **统计面板**：今日/总计点击次数、运行天数、最近 100 条点击记录
+- **规则同步**：支持 GitHub 私有/公开仓库上传下载规则
+- **深色模式**：自适应系统深色/浅色主题
 
-📦 **[v1.0 APK 下载](https://github.com/Simiely/android-adskip/releases/download/v1.0/app-debug.apk)**
+## 使用方法
 
-或到 [Releases](https://github.com/Simiely/android-adskip/releases) 页面取最新版本。
+### 1. 开启权限
+- 无障碍服务：设置 → 无障碍 → AdSkip → 开启
+- 悬浮窗权限：设置 → 应用 → AdSkip → 显示在其他应用上层 → 允许
+- 电池优化：设置 → 应用 → AdSkip → 电池 → 无限制
+- HyperOS 用户：还需开启"自启动"并锁住多任务
 
-## 功能速览
+### 2. 关键词自动跳过
+打开"关键词匹配"开关，内置关键词会自动搜索并点击匹配的按钮。
 
-| 功能 | 说明 |
-|------|------|
-| **混合匹配** | 内置保守关键词（跳过 / 跳过广告 / 跳过视频广告 / 关闭广告）开箱即用；长尾 App 用悬浮胶囊手动捕获 |
-| **关键词开关** | 开启覆盖更广，关闭仅用手动规则——最省电 |
-| **无延迟点击** | 界面变化即匹配，命中 `performAction(CLICK)` |
-| **全局总开关** | 一键暂停/恢复，无需撤销无障碍权限 |
-| **悬浮胶囊** | 常驻小圆点，点一下进捕获模式 → 点真实「跳过」按钮 → 自动收录 |
-| **规则云同步** | 设置页密码门 → GitHub 仓库上传/下载（合并去重） |
-| **前台保活** | 前台服务 + 常驻通知 + 开机自启 |
+### 3. 手动捕获规则
+1. 点击悬浮球进入捕获模式（屏幕出现红色半透明遮罩，可点击按钮标红）
+2. 在目标 App 中点击你想跳过的按钮
+3. 规则自动保存，只对该 App 生效
 
-
-## 首次使用（重要）
-
-### 1. 安装 APK
-手机打开 [Release 页面](https://github.com/Simiely/android-adskip/releases) 下载 `app-debug.apk` 安装。  
-如提示"未知来源"，到系统设置里允许「安装未知应用」。
-
-### 2. 开启三项权限
-| 步骤 | 操作 | 如何开 |
-|------|------|--------|
-| ① 无障碍 | 打开 App → 点「开启无障碍服务」→ 在系统无障碍列表启用 **AdSkip** | App 内一键跳转 |
-| ② 悬浮窗 | 点「开启悬浮窗权限」→ 允许「显示在其他应用上层」 | App 内一键跳转 |
-| ③ 电池白名单 | 点「电池无限制 / 自启动白名单」→ 省电策略选**无限制** + 允许**自启动** + 任务栏**锁定** | App 内一键跳转 |
-
-> **HyperOS 3 额外步骤**：在应用管理里还要开「后台弹出界面」权限，否则悬浮胶囊在后台界面点不出来。
-
-### 3. 确认运行
-回到 App 看到「运行中：监听界面并自动跳过」，悬浮胶囊出现，即完成。
-
-## 日常使用
-
-| 操作 | 怎么做 |
-|------|--------|
-| 自动跳过广告 | 打开有广告的 App，自动识别并点击「跳过」类按钮 |
-| 手动捕获按钮 | 点悬浮胶囊 → 点真实「跳过」按钮 → 自动收录，下次自动点 |
-| 暂停/恢复 | 进「规则与同步设置」→ 顶部总开关 |
-| 切省电模式 | 同上 → 关掉关键词开关，只用手动规则 |
-| 管理规则 | 同上 → 查看/删除关键词与捕获规则 |
-| 规则云同步 | 同上 → 输密码解锁 → 填 GitHub 仓库 → 下载/上传 |
-
-
-## 规则云同步（隐藏菜单）
-
-进入「规则与同步设置」，底部「规则云同步」：
-
-1. 输入默认密码 **`12345678`** 解锁同步面板
-   - 密码经 SHA-256 哈希后 Keystore 加密存储，可在代码中修改默认值
-2. 填仓库 `owner / repo / branch / path`（如 `Simiely/adskip-rules/main/rules.json`）
-3. **下载**：不填 Token 也能用（公开仓库 raw 链接）→ 自动合并去重
-4. **上传**：需填写 [GitHub Fine-grained Token](https://github.com/settings/tokens)（仅授权目标仓库 `Contents: Read/Write`）
-
-> 🔐 Token 经 Android Keystore 加密存储，仅上传时经 HTTPS 发送。
-
-
-## 技术栈
-
-| 层 | 技术 |
-|----|------|
-| 语言 | Kotlin 1.9 |
-| 构建 | Gradle 8.9 + AGP 8.5 |
-| UI | Material 3 + ViewBinding |
-| 存储 | EncryptedSharedPreferences（Android Keystore 加密） |
-| 网络 | HttpURLConnection + org.json（零额外依赖） |
-| 保活 | 前台服务 `specialUse`（Android 14+ 合规） |
-| CI/CD | GitHub Actions 自动构建 APK + Release |
-
+### 4. 应用过滤
+- 开启"应用过滤"总开关
+- 选择"黑名单"（名单内的不跳过）或"白名单"（只跳过名单内的）
+- 手动捕获规则时自动将 App 加入名单
 
 ## 架构
 
 ```
-MainActivity (权限引导)
-    │
-    ├─→ SettingsActivity (规则管理 / 密码门 / 云同步)
-    │
-    └─→ KeepAliveService (前台保活) ─→ FloatWindowManager (悬浮胶囊)
-            │
-            └─→ AdSkipAccessibilityService (事件驱动核心)
-                  ├─ onAccessibilityEvent() → 关键词/规则匹配 → performAction(CLICK)
-                  └─ 捕获模式 → TYPE_VIEW_CLICKED → 记录节点指纹
+app/src/main/java/com/simely/adskip/
+├── service/           # 无障碍服务 + 前台保活服务
+├── float/             # 悬浮窗管理 + 捕获高亮覆盖层
+├── ui/                # MainActivity + 设置页
+├── store/             # 规则存储 + 统计存储 + 安全配置
+├── model/             # Rule / RuleSet 数据类
+├── sync/              # GitHub API 同步
+└── util/              # 安全配置 + 日志
 ```
 
+## 技术要点
 
-## 已知限制
-
-- 银行/支付类 App 可能检测并拒绝无障碍
-- WebView 内的广告文字可能不暴露给无障碍服务
-- HyperOS 后台管控极严，务必完成电池白名单 + 任务栏锁定
+- `AccessibilityNodeInfo.findAccessibilityNodeInfosByText/ViewId` 匹配目标
+- `resolveToNearestClickable()` 从子节点上溯到可点击祖先
+- 规则指纹 `pkg|activity|viewId|text|contentDesc|className` 去重
+- `EncryptedSharedPreferences` 存储规则和 Token
+- 前台服务 `specialUse` + `<property>` 声明支持 Android 14+
 
 ## License
 
-GPL-3.0
+MIT

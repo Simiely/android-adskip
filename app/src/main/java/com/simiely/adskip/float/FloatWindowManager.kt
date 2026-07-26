@@ -1,9 +1,8 @@
 package com.simely.adskip.float
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.PixelFormat
-import android.os.Handler
-import android.os.Looper
 import android.provider.Settings
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -11,6 +10,8 @@ import android.view.MotionEvent
 import android.view.View
 import kotlin.math.abs
 import android.view.WindowManager
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.widget.Toast
 import com.simely.adskip.AppState
 import com.simely.adskip.R
@@ -18,9 +19,9 @@ import com.simely.adskip.R
 /**
  * 悬浮胶囊管理：
  * - 常驻 TYPE_APPLICATION_OVERLAY 小圆点
- * - 点击胶囊 → 进入"手动捕获模式"（隐藏胶囊，显示半透明提示遮罩）
- * - 点击遮罩取消捕获；捕获模式下真实点击由无障碍服务捕获
- * - 修复：捕获期间隐藏胶囊，避免胶囊拦截用户对目标按钮的触摸
+ * - 点击 → 进入捕获模式（胶囊 FLAG_NOT_TOUCHABLE，所有触摸穿透到 App）
+ * - 捕获取消靠通知栏「取消捕获」按钮（Android 12+ 信任触摸限制无法用 FLAG_NOT_TOUCH_MODAL）
+ * - 长按 → 隐藏胶囊
  */
 class FloatWindowManager(private val context: Context) {
 
@@ -40,28 +41,35 @@ class FloatWindowManager(private val context: Context) {
         y = 200
     }
 
-    /** 捕获提示遮罩：穿透触摸（用户点击直达下方 App 按钮），取消靠超时 */
-    private val hintParams = WindowManager.LayoutParams(
-        WindowManager.LayoutParams.MATCH_PARENT,
-        WindowManager.LayoutParams.MATCH_PARENT,
-        WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
-        PixelFormat.TRANSLUCENT
-    )
+    private val hintParams: WindowManager.LayoutParams by lazy {
+        WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            x = 0; y = 0
+        }
+    }
 
     private var downX = 0f
     private var downY = 0f
-    private var downTime = 0L
     private var moved = false
-    private var longPressed = false
-    private var captureTimeout: Handler? = null
-    private val captureTimeoutMs = 15_000L
+    private var longPressFired = false
     private var warnedNoOverlay = false
-    /** 胶囊隐藏后回调，通知 KeepAliveService 更新通知栏 */
     var onVisibilityChanged: ((Boolean) -> Unit)? = null
+    /** 捕获状态变化回调（用于 KeepAliveService 更新通知栏） */
+    var onCaptureStateChanged: ((Boolean) -> Unit)? = null
+
+    private val longPressHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var longPressRunnable: Runnable? = null
 
     fun canShow(): Boolean = Settings.canDrawOverlays(context)
-
     fun isVisible(): Boolean = capsuleView != null
 
     fun showCapsule() {
@@ -76,8 +84,8 @@ class FloatWindowManager(private val context: Context) {
         warnedNoOverlay = false
         val view = LayoutInflater.from(context).inflate(R.layout.floating_capsule, null)
         view.setOnTouchListener(::onCapsuleTouch)
-        capsuleView = view
         wm.addView(view, capsuleParams)
+        capsuleView = view
         onVisibilityChanged?.invoke(true)
     }
 
@@ -96,49 +104,58 @@ class FloatWindowManager(private val context: Context) {
     private fun onCapsuleTouch(v: View, event: MotionEvent): Boolean {
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
-                downX = event.rawX
-                downY = event.rawY
-                downTime = System.currentTimeMillis()
-                moved = false
-                longPressed = false
-                // 500ms 后检测长按
-                v.postDelayed({
-                    if (!moved && capsuleView != null) {
-                        longPressed = true
-                        hideCapsuleAndNotify()
-                    }
-                }, 500L)
+                downX = event.rawX; downY = event.rawY; moved = false; longPressFired = false
+                // 500ms 长按 → 打开主界面
+                longPressRunnable = Runnable {
+                    longPressFired = true
+                    openMainActivity()
+                }
+                longPressHandler.postDelayed(longPressRunnable!!, 500)
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
-                val dx = event.rawX - downX
-                val dy = event.rawY - downY
-                if (abs(dx) > 8 || abs(dy) > 8) moved = true
-                if (moved && !longPressed) {
-                    capsuleParams.x = (capsuleParams.x + dx.toInt()).coerceAtLeast(0)
-                    capsuleParams.y = (capsuleParams.y + dy.toInt()).coerceAtLeast(0)
-                    downX = event.rawX
-                    downY = event.rawY
+                val dx = event.rawX - downX; val dy = event.rawY - downY
+                if (abs(dx) > 8 || abs(dy) > 8) {
+                    moved = true; longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
+                }
+                if (moved) {
+                    val vw = capsuleView?.width ?: 100; val vh = capsuleView?.height ?: 100
+                    val bounds = if (android.os.Build.VERSION.SDK_INT >= 30) {
+                        wm.currentWindowMetrics.bounds
+                    } else {
+                        val r = android.graphics.Rect()
+                        @Suppress("DEPRECATION") wm.defaultDisplay.getRectSize(r)
+                        r
+                    }
+                    val maxX = bounds.width() - vw; val maxY = bounds.height() - vh
+                    capsuleParams.x = (capsuleParams.x + dx.toInt()).coerceIn(0, maxX)
+                    capsuleParams.y = (capsuleParams.y + dy.toInt()).coerceIn(0, maxY)
+                    downX = event.rawX; downY = event.rawY
                     wm.updateViewLayout(v, capsuleParams)
                 }
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                v.removeCallbacks(null)
-                if (!moved && !longPressed) onCapsuleTap()
+                longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
+                if (!moved && !longPressFired) onCapsuleTap()
             }
         }
         return true
     }
 
     private fun onCapsuleTap() {
-        if (AppState.isCapturing) {
-            cancelCapture()
-        } else {
-            enterCapture()
+        // 点击胶囊：开始手动捕获
+        if (AppState.isCapturing) cancelCapture() else enterCapture()
+    }
+
+    private fun openMainActivity() {
+        val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+        if (intent != null) {
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+            context.startActivity(intent)
         }
     }
 
-    private fun enterCapture() {
+    fun enterCapture() {
         AppState.enterCapture(
             onCaptured = {
                 exitCaptureMode()
@@ -147,31 +164,65 @@ class FloatWindowManager(private val context: Context) {
             onCancelled = { exitCaptureMode() }
         )
 
-        // 关键修复：隐藏胶囊，让触摸穿透到目标 App 的按钮
-        capsuleView?.let { wm.removeView(it) }
-        capsuleView = null
+        // 不修改胶囊 flag：胶囊 48dp 在左上角，不挡按钮
+        // 提示遮罩 FLAG_NOT_TOUCHABLE 穿透，触摸可达 App 按钮
+        capsuleView?.let { v ->
+            v.findViewById<View>(R.id.capsule)?.let {
+                it.setBackgroundResource(R.drawable.bg_capsule_capture)
+            }
+        }
 
         if (hintView == null) {
-            hintView = LayoutInflater.from(context).inflate(R.layout.capture_hint, null)
+            hintView = HighlightOverlay(context)
             wm.addView(hintView, hintParams)
         }
+        // 定时刷新高亮覆盖层
+        startHighlightRefresh()
 
-        // 超时自动取消
-        captureTimeout = Handler(Looper.getMainLooper()).apply {
-            postDelayed({ cancelCapture() }, captureTimeoutMs)
-        }
+        onCaptureStateChanged?.invoke(true)
     }
 
-    private fun cancelCapture() {
+    private var highlightHandler: android.os.Handler? = null
+
+    fun cancelCapture() {
         AppState.exitCapture()
         exitCaptureMode()
     }
 
+    private fun startHighlightRefresh() {
+        highlightHandler = android.os.Handler(android.os.Looper.getMainLooper())
+        highlightHandler?.post(object : Runnable {
+            override fun run() {
+                hintView?.invalidate()
+                if (AppState.isCapturing) highlightHandler?.postDelayed(this, 150)
+            }
+        })
+    }
+
     private fun exitCaptureMode() {
-        captureTimeout?.removeCallbacksAndMessages(null)
-        captureTimeout = null
+        highlightHandler?.removeCallbacksAndMessages(null)
+        highlightHandler = null
+        capsuleView?.let { v ->
+            v.findViewById<View>(R.id.capsule)?.let {
+                it.setBackgroundResource(R.drawable.bg_capsule)
+            }
+        }
         hideHint()
-        showCapsule()
+        vibrate()
+        onCaptureStateChanged?.invoke(false)
+    }
+
+    private fun vibrate() {
+        try {
+            val vib = if (android.os.Build.VERSION.SDK_INT >= 31) {
+                val vm = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+                vm.defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            }
+            vib.vibrate(android.os.VibrationEffect.createOneShot(50, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+        } catch (_: Exception) {}
     }
 
     private fun hideHint() {
