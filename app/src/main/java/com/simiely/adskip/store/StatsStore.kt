@@ -10,7 +10,11 @@ import java.util.*
 class StatsStore(context: Context) {
 
     private val prefs: SharedPreferences = context.getSharedPreferences("adskip_stats", Context.MODE_PRIVATE)
+<<<<<<< HEAD
     private val dateFmt: SimpleDateFormat get() = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+=======
+    private val dateFmt = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+>>>>>>> 3038caf6cf3cfd455ae63c3e61dc2493ca600a14
 
     fun getTodayCount(): Int = getDailyCount(dateFmt.format(Date()))
     fun getTotalCount(): Long = prefs.getLong(KEY_TOTAL, 0L)
@@ -43,7 +47,11 @@ class StatsStore(context: Context) {
         return r
     }
 
+<<<<<<< HEAD
     fun recordClick(pkg: String, text: String, viewId: String = "") {
+=======
+    fun recordClick(pkg: String, text: String) {
+>>>>>>> 3038caf6cf3cfd455ae63c3e61dc2493ca600a14
         val today = dateFmt.format(Date())
         val map = dailyMap().toMutableMap()
         map[today] = (map[today] ?: 0) + 1
@@ -52,7 +60,11 @@ class StatsStore(context: Context) {
             .putLong(KEY_TOTAL, getTotalCount() + 1)
             .putLong(KEY_START, if (prefs.getLong(KEY_START, 0L) == 0L) System.currentTimeMillis() else prefs.getLong(KEY_START, 0L))
             .apply()
+<<<<<<< HEAD
         addLog(pkg, text, viewId)
+=======
+        addLog(pkg, text)
+>>>>>>> 3038caf6cf3cfd455ae63c3e61dc2493ca600a14
     }
 
     fun getRecentLogs(limit: Int = 20): List<ClickLog> {
@@ -63,9 +75,15 @@ class StatsStore(context: Context) {
         } catch (_: Exception) { return emptyList() }
     }
 
+<<<<<<< HEAD
     private fun addLog(app: String, text: String, viewId: String = "") {
         val logs = getRecentLogs(100).toMutableList()
         logs.add(0, ClickLog(app, text, System.currentTimeMillis(), viewId))
+=======
+    private fun addLog(app: String, text: String) {
+        val logs = getRecentLogs(100).toMutableList()
+        logs.add(0, ClickLog(app, text, System.currentTimeMillis()))
+>>>>>>> 3038caf6cf3cfd455ae63c3e61dc2493ca600a14
         if (logs.size > 100) logs.removeAt(logs.lastIndex)
         prefs.edit().putString(KEY_LOGS, JSONArray().apply { logs.forEach { put(it.toJson()) } }.toString()).apply()
     }
@@ -87,18 +105,28 @@ class StatsStore(context: Context) {
         appendLine("今日：${getTodayCount()} 次")
     }
 
+<<<<<<< HEAD
     data class ClickLog(val app: String, val text: String, val time: Long, val viewId: String = "") {
         fun toJson() = JSONObject().apply { put("a", app); put("t", text); put("ts", time); if (viewId.isNotEmpty()) put("v", viewId) }
         companion object {
             fun fromJson(o: JSONObject) = ClickLog(o.optString("a"), o.optString("t"), o.optLong("ts"), o.optString("v"))
+=======
+    data class ClickLog(val app: String, val text: String, val time: Long) {
+        fun toJson() = JSONObject().apply { put("a", app); put("t", text); put("ts", time) }
+        companion object {
+            fun fromJson(o: JSONObject) = ClickLog(o.optString("a"), o.optString("t"), o.optLong("ts"))
+>>>>>>> 3038caf6cf3cfd455ae63c3e61dc2493ca600a14
         }
         fun formattedTime(): String = SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(time))
     }
 
+<<<<<<< HEAD
     fun clearLogs() = prefs.edit().remove(KEY_LOGS).apply()
 
     fun clear() = prefs.edit().clear().apply()
 
+=======
+>>>>>>> 3038caf6cf3cfd455ae63c3e61dc2493ca600a14
     companion object {
         private const val KEY_DAILY = "daily"
         private const val KEY_TOTAL = "total"

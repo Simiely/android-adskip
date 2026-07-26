@@ -16,8 +16,11 @@ class AdSkipAccessibilityService : AccessibilityService() {
     private var secure: SecurePrefs? = null
     private var stats: StatsStore? = null
     private val lastClick = mutableMapOf<String, Long>()
+<<<<<<< HEAD
     private var clickCount = 0
     private var lastHighlightScan = 0L
+=======
+>>>>>>> 3038caf6cf3cfd455ae63c3e61dc2493ca600a14
 
     override fun onCreate() {
         super.onCreate()
@@ -36,6 +39,7 @@ class AdSkipAccessibilityService : AccessibilityService() {
 
         val root = rootInActiveWindow ?: return
         try {
+<<<<<<< HEAD
             val pkg = root.packageName?.toString() ?: ""
             if (pkg == packageName) return  // 绝对不处理自己的界面
 
@@ -61,6 +65,12 @@ class AdSkipAccessibilityService : AccessibilityService() {
                         }
                     }
                 }
+=======
+            if (AppState.isCapturing && event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED) {
+                captureNode(event)
+                AppState.exitCapture()
+                AppState.onCaptured?.invoke()
+>>>>>>> 3038caf6cf3cfd455ae63c3e61dc2493ca600a14
                 return
             }
 
@@ -88,7 +98,11 @@ class AdSkipAccessibilityService : AccessibilityService() {
         val targets = mutableListOf<AccessibilityNodeInfo>()
         val kwOn = secure?.getKeywordEnabled() == true
 
+<<<<<<< HEAD
         if (kwOn) {
+=======
+        if (secure?.getKeywordEnabled() == true) {
+>>>>>>> 3038caf6cf3cfd455ae63c3e61dc2493ca600a14
             for (kw in rs.getKeywords()) {
                 if (kw.isBlank()) continue
                 runCatching { root.findAccessibilityNodeInfosByText(kw) }
@@ -98,10 +112,17 @@ class AdSkipAccessibilityService : AccessibilityService() {
             }
         }
 
+<<<<<<< HEAD
         // 手动规则始终生效（仅匹配当前包名）
         for (rule in rs.getRules()) {
             if (rule.pkg != pkg) continue
             targets.addAll(findRuleNodes(root, rule).filter { isClickable(it) })
+=======
+        if (targets.isEmpty()) {
+            for (rule in rs.getRules()) {
+                targets.addAll(findRuleNodes(root, rule).filter { isClickable(it) })
+            }
+>>>>>>> 3038caf6cf3cfd455ae63c3e61dc2493ca600a14
         }
 
         val resolvedNodes = mutableSetOf<AccessibilityNodeInfo>()
@@ -118,6 +139,7 @@ class AdSkipAccessibilityService : AccessibilityService() {
             if (ruleStore?.isBlocked(pkg, btnText, btnVid) == true) continue
 
             lastClick[key] = now
+<<<<<<< HEAD
             if (clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
                 val vid = clickable.viewIdResourceName ?: ""
                 val txt = node.text?.toString()?.ifEmpty { clickable.text?.toString() } ?: ""
@@ -125,16 +147,31 @@ class AdSkipAccessibilityService : AccessibilityService() {
                 val logText = txt.ifEmpty { cd }
                 stats?.recordClick(pkg, logText, vid)
             }
+=======
+            clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            // 记录点击统计
+            stats?.recordClick(pkg, clickable.text?.toString() ?: "")
+>>>>>>> 3038caf6cf3cfd455ae63c3e61dc2493ca600a14
             break
         }
         targets.forEach { it.recycle() }
         // 不回收 resolvedNodes——通过 .parent 获取的是活树节点，由框架管理，recycle 会导致 native crash
 
+<<<<<<< HEAD
         // 定期清理 lastClick 过期条目
         clickCount++
         if (clickCount % 100 == 0) {
             val cutoff = System.currentTimeMillis() - COOLDOWN_MS * 10
             lastClick.entries.removeAll { it.value < cutoff }
+=======
+    private fun findRuleNodes(root: AccessibilityNodeInfo, rule: Rule): List<AccessibilityNodeInfo> {
+        return when {
+            !rule.viewId.isNullOrEmpty() ->
+                runCatching { root.findAccessibilityNodeInfosByViewId(rule.viewId) }.getOrDefault(emptyList())
+            !rule.text.isNullOrEmpty() ->
+                runCatching { root.findAccessibilityNodeInfosByText(rule.text) }.getOrDefault(emptyList())
+            else -> emptyList()
+>>>>>>> 3038caf6cf3cfd455ae63c3e61dc2493ca600a14
         }
     }
 
@@ -149,6 +186,7 @@ class AdSkipAccessibilityService : AccessibilityService() {
     private fun deepScan(node: AccessibilityNodeInfo, out: MutableList<android.graphics.Rect>, seen: MutableSet<String>, depth: Int) {
         if (depth > 5 || out.size >= 200) return
         try {
+<<<<<<< HEAD
             // 节点自身可点击 或 有可点击祖先 → 都视为可捕获目标
             if (node.isClickable || quickHasClickableAncestor(node)) {
                 val r = android.graphics.Rect()
@@ -322,6 +360,28 @@ class AdSkipAccessibilityService : AccessibilityService() {
         if (n.isClickable) return n
         var p = n.parent; var d = 0
         while (p != null && d < 10) { if (p.isClickable) return p; p = p.parent; d++ }
+=======
+            val rule = Rule(
+                text = src.text?.toString(), viewId = src.viewIdResourceName,
+                pkg = event.packageName?.toString() ?: "", activity = null,
+                action = "click", name = src.text?.toString()
+            )
+            rs.addRule(rule)
+        } finally { src.recycle() }
+    }
+
+    private fun isClickable(n: AccessibilityNodeInfo): Boolean {
+        if (n.isClickable) return true
+        var p = n.parent
+        while (p != null) { if (p.isClickable) return true; p = p.parent }
+        return false
+    }
+
+    private fun resolveClickable(n: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+        if (n.isClickable) return n
+        var p = n.parent
+        while (p != null) { if (p.isClickable) return p; p = p.parent }
+>>>>>>> 3038caf6cf3cfd455ae63c3e61dc2493ca600a14
         return null
     }
 

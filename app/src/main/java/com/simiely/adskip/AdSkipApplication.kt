@@ -1,11 +1,11 @@
 package com.simely.adskip
 
 import android.app.Application
-import com.simely.adskip.util.Logger
 
 class AdSkipApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        Logger.isDebug = (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        // RuleStore / SecurePrefs 为懒加载单例式封装，无需在此预热。
+        // 保活服务由 MainActivity 与 BootReceiver 启动。
     }
 }

@@ -16,10 +16,15 @@ import com.simely.adskip.float.FloatWindowManager
 import com.simely.adskip.ui.MainActivity
 
 /**
+<<<<<<< HEAD
  * 前台保活服务：常驻通知 + 持有悬浮胶囊。
  * - 通知栏按钮：显示/隐藏悬浮窗、取消捕获
  * - 长按胶囊 → 隐藏
  * - 点击胶囊 → 进入捕获模式（通知栏出现「取消捕获」）
+=======
+ * 前台保活服务：常驻通知 + 持有悬浮胶囊，降低被 HyperOS 回收的概率。
+ * 配合系统白名单（省电无限制 / 自启动 / 任务栏锁定）效果最佳。
+>>>>>>> 3038caf6cf3cfd455ae63c3e61dc2493ca600a14
  */
 class KeepAliveService : Service() {
 
@@ -27,6 +32,7 @@ class KeepAliveService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+<<<<<<< HEAD
         android.util.Log.e("AdSkip", "KeepAlive onCreate START")
         try {
             createChannel()
@@ -70,17 +76,36 @@ class KeepAliveService : Service() {
             }
             ACTION_CANCEL_CAPTURE -> floatManager.cancelCapture()
         }
+=======
+        floatManager = FloatWindowManager(this)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(NOTIF_ID, buildNotification(),
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+        } else {
+            startForeground(NOTIF_ID, buildNotification())
+        }
+        floatManager.showCapsule()
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // 被杀后系统会尝试重建
+>>>>>>> 3038caf6cf3cfd455ae63c3e61dc2493ca600a14
         return START_STICKY
     }
 
     override fun onDestroy() {
+<<<<<<< HEAD
         if (::floatManager.isInitialized) floatManager.hideCapsule()
+=======
+        floatManager.hideCapsule()
+>>>>>>> 3038caf6cf3cfd455ae63c3e61dc2493ca600a14
         stopForeground(STOP_FOREGROUND_REMOVE)
         super.onDestroy()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+<<<<<<< HEAD
     private fun startForegroundInternal(notif: Notification) {
         startForeground(NOTIF_ID, notif)
     }
@@ -118,10 +143,20 @@ class KeepAliveService : Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
+=======
+    private fun buildNotification(): Notification {
+        createChannel()
+        val intent = Intent(this, MainActivity::class.java)
+        val pi = PendingIntent.getActivity(
+            this, 0, intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+>>>>>>> 3038caf6cf3cfd455ae63c3e61dc2493ca600a14
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(title)
-            .setContentText(text)
+            .setContentTitle("AdSkip 运行中")
+            .setContentText("监听界面并自动跳过广告")
             .setSmallIcon(R.drawable.ic_notify)
+<<<<<<< HEAD
             .setContentIntent(mainPi)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setOngoing(true)
@@ -137,6 +172,11 @@ class KeepAliveService : Service() {
                     addAction(0, "取消捕获", cancelPi)
                 }
             }
+=======
+            .setContentIntent(pi)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(true)
+>>>>>>> 3038caf6cf3cfd455ae63c3e61dc2493ca600a14
             .build()
     }
 
@@ -156,8 +196,11 @@ class KeepAliveService : Service() {
     companion object {
         const val NOTIF_ID = 1001
         const val CHANNEL_ID = "adskip_keepalive"
+<<<<<<< HEAD
         const val ACTION_SHOW_CAPSULE = "com.simely.adskip.SHOW_CAPSULE"
         const val ACTION_HIDE_CAPSULE = "com.simely.adskip.HIDE_CAPSULE"
         const val ACTION_CANCEL_CAPTURE = "com.simely.adskip.CANCEL_CAPTURE"
+=======
+>>>>>>> 3038caf6cf3cfd455ae63c3e61dc2493ca600a14
     }
 }

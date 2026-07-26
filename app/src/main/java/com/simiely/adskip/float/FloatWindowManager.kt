@@ -19,9 +19,14 @@ import com.simely.adskip.R
 /**
  * 悬浮胶囊管理：
  * - 常驻 TYPE_APPLICATION_OVERLAY 小圆点
+<<<<<<< HEAD
  * - 点击 → 进入捕获模式（胶囊 FLAG_NOT_TOUCHABLE，所有触摸穿透到 App）
  * - 捕获取消靠通知栏「取消捕获」按钮（Android 12+ 信任触摸限制无法用 FLAG_NOT_TOUCH_MODAL）
  * - 长按 → 隐藏胶囊
+=======
+ * - 点击胶囊 → 进入/退出“手动捕获模式”
+ * - 捕获模式下显示全屏半透明提示遮罩（穿透点击，真实点击由无障碍捕获）
+>>>>>>> 3038caf6cf3cfd455ae63c3e61dc2493ca600a14
  */
 class FloatWindowManager(private val context: Context) {
 
@@ -41,6 +46,7 @@ class FloatWindowManager(private val context: Context) {
         y = 200
     }
 
+<<<<<<< HEAD
     private val hintParams: WindowManager.LayoutParams by lazy {
         WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
@@ -56,10 +62,20 @@ class FloatWindowManager(private val context: Context) {
             x = 0; y = 0
         }
     }
+=======
+    private val hintParams = WindowManager.LayoutParams(
+        WindowManager.LayoutParams.MATCH_PARENT,
+        WindowManager.LayoutParams.MATCH_PARENT,
+        WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+        PixelFormat.TRANSLUCENT
+    )
+>>>>>>> 3038caf6cf3cfd455ae63c3e61dc2493ca600a14
 
     private var downX = 0f
     private var downY = 0f
     private var moved = false
+<<<<<<< HEAD
     private var longPressFired = false
     private var warnedNoOverlay = false
     var onVisibilityChanged: ((Boolean) -> Unit)? = null
@@ -71,20 +87,18 @@ class FloatWindowManager(private val context: Context) {
 
     fun canShow(): Boolean = Settings.canDrawOverlays(context)
     fun isVisible(): Boolean = capsuleView != null
+=======
+
+    fun canShow(): Boolean = Settings.canDrawOverlays(context)
+>>>>>>> 3038caf6cf3cfd455ae63c3e61dc2493ca600a14
 
     fun showCapsule() {
-        if (!canShow()) {
-            if (!warnedNoOverlay) {
-                warnedNoOverlay = true
-                Toast.makeText(context, "请开启悬浮窗权限以显示悬浮胶囊", Toast.LENGTH_LONG).show()
-            }
-            return
-        }
+        if (!canShow()) return
         if (capsuleView != null) return
-        warnedNoOverlay = false
         val view = LayoutInflater.from(context).inflate(R.layout.floating_capsule, null)
         view.setOnTouchListener(::onCapsuleTouch)
         wm.addView(view, capsuleParams)
+<<<<<<< HEAD
         capsuleView = view
         onVisibilityChanged?.invoke(true)
     }
@@ -93,6 +107,8 @@ class FloatWindowManager(private val context: Context) {
         hideCapsule()
         onVisibilityChanged?.invoke(false)
         Toast.makeText(context, "悬浮窗已隐藏，点击通知栏可重新显示", Toast.LENGTH_SHORT).show()
+=======
+>>>>>>> 3038caf6cf3cfd455ae63c3e61dc2493ca600a14
     }
 
     fun hideCapsule() {
@@ -104,6 +120,7 @@ class FloatWindowManager(private val context: Context) {
     private fun onCapsuleTouch(v: View, event: MotionEvent): Boolean {
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
+<<<<<<< HEAD
                 downX = event.rawX; downY = event.rawY; moved = false; longPressFired = false
                 // 500ms 长按 → 打开主界面
                 longPressRunnable = Runnable {
@@ -137,6 +154,24 @@ class FloatWindowManager(private val context: Context) {
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
                 if (!moved && !longPressFired) onCapsuleTap()
+=======
+                downX = event.rawX
+                downY = event.rawY
+                moved = false
+            }
+            MotionEvent.ACTION_MOVE -> {
+                val dx = event.rawX - downX
+                val dy = event.rawY - downY
+                if (abs(dx) > 8 || abs(dy) > 8) moved = true
+                capsuleParams.x = (capsuleParams.x + dx.toInt()).coerceAtLeast(0)
+                capsuleParams.y = (capsuleParams.y + dy.toInt()).coerceAtLeast(0)
+                downX = event.rawX
+                downY = event.rawY
+                wm.updateViewLayout(v, capsuleParams)
+            }
+            MotionEvent.ACTION_UP -> {
+                if (!moved) onCapsuleTap()
+>>>>>>> 3038caf6cf3cfd455ae63c3e61dc2493ca600a14
             }
         }
         return true
@@ -155,6 +190,7 @@ class FloatWindowManager(private val context: Context) {
         }
     }
 
+<<<<<<< HEAD
     fun enterCapture() {
         AppState.enterCapture(
             onCaptured = {
@@ -172,20 +208,33 @@ class FloatWindowManager(private val context: Context) {
             }
         }
 
+=======
+    private fun enterCapture() {
+        AppState.enterCapture()
+        AppState.onCaptured = {
+            hideHint()
+            Toast.makeText(context, R.string.toast_captured, Toast.LENGTH_SHORT).show()
+        }
+        AppState.onCaptureCancelled = { hideHint() }
+>>>>>>> 3038caf6cf3cfd455ae63c3e61dc2493ca600a14
         if (hintView == null) {
             hintView = HighlightOverlay(context)
             wm.addView(hintView, hintParams)
         }
+<<<<<<< HEAD
         // 定时刷新高亮覆盖层
         startHighlightRefresh()
 
         onCaptureStateChanged?.invoke(true)
+=======
+>>>>>>> 3038caf6cf3cfd455ae63c3e61dc2493ca600a14
     }
 
     private var highlightHandler: android.os.Handler? = null
 
     fun cancelCapture() {
         AppState.exitCapture()
+<<<<<<< HEAD
         exitCaptureMode()
     }
 
@@ -223,6 +272,9 @@ class FloatWindowManager(private val context: Context) {
             }
             vib.vibrate(android.os.VibrationEffect.createOneShot(50, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
         } catch (_: Exception) {}
+=======
+        hideHint()
+>>>>>>> 3038caf6cf3cfd455ae63c3e61dc2493ca600a14
     }
 
     private fun hideHint() {

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # ── 保留所有 AdSkip 代码（避免 R8 误删） ──
 -keep class com.simely.adskip.** { *; }
 
@@ -41,3 +42,8 @@
 -keepattributes *Annotation*
 -keepattributes SourceFile,LineNumberTable
 -keepattributes InnerClasses
+=======
+# 保留默认混淆规则（当前未开启 minify，仅占位）
+-keepattributes *Annotation*
+-dontwarn androidx.security.**
+>>>>>>> 3038caf6cf3cfd455ae63c3e61dc2493ca600a14
