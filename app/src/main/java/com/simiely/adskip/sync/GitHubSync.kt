@@ -1,7 +1,7 @@
 package com.simely.adskip.sync
 
 import android.util.Base64
-import android.util.Log
+import com.simely.adskip.util.Logger
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -17,7 +17,6 @@ import kotlin.math.pow
  */
 object GitHubSync {
 
-    private const val TAG = "GitHubSync"
     private const val MAX_RETRIES = 3
     private const val BASE_DELAY_MS = 1000L
 
@@ -86,7 +85,10 @@ object GitHubSync {
             }.toString()
             try {
                 conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
-                if (conn.responseCode !in 200..299) throw SyncException("HTTP ${conn.responseCode}", conn.responseCode)
+                if (conn.responseCode !in 200..299) {
+                    val errorBody = try { conn.errorStream?.bufferedReader()?.readText() } catch (_: Exception) { "" }
+                    throw SyncException("HTTP ${conn.responseCode}: ${errorBody}", conn.responseCode)
+                }
                 true
             } finally {
                 conn.disconnect()
@@ -179,10 +181,10 @@ object GitHubSync {
             } catch (e: SyncException) {
                 if (!e.isRetryable()) throw e
                 lastEx = e
-                Log.w(TAG, "$tag attempt ${attempt + 1} failed: ${e.message}")
+                Logger.w("$tag attempt ${attempt + 1} failed: ${e.message}")
             } catch (e: Exception) {
                 lastEx = e
-                Log.w(TAG, "$tag attempt ${attempt + 1} failed: ${e.message}")
+                Logger.w("$tag attempt ${attempt + 1} failed: ${e.message}")
             }
             if (attempt < MAX_RETRIES) {
                 Thread.sleep(BASE_DELAY_MS * 2.0.pow(attempt).toLong())

@@ -198,10 +198,18 @@
                     <LinearLayout android:id="@+id/rule_groups"
                         android:layout_width="match_parent" android:layout_height="wrap_content"
                         android:orientation="vertical" />
-                    <com.google.android.material.button.MaterialButton android:id="@+id/btn_clear_rules"
-                        style="@style/Widget.Material3.Button.TextButton"
-                        android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="清空所有规则" android:textSize="13sp" android:textColor="@color/pink" android:minHeight="44dp" />
+                    <LinearLayout
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_clear_rules"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="清空所有规则" android:textSize="13sp" android:textColor="@color/pink" android:minHeight="44dp" />
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_clear_blocked"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="清空所有屏蔽" android:textSize="13sp" android:textColor="@color/text_secondary" android:minHeight="44dp" />
+                    </LinearLayout>
                 </LinearLayout>
 
             </LinearLayout>
@@ -232,36 +240,44 @@
                 </LinearLayout>
                 <LinearLayout android:id="@+id/panel_filter"
                     android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:orientation="horizontal" android:paddingHorizontal="12dp" android:paddingTop="4dp">
-                        <TextView android:id="@+id/btn_mode_black"
-                            android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                            android:gravity="center" android:text="黑名单模式" android:textSize="14sp"
-                            android:padding="10dp" android:background="@drawable/bg_chip_selected"
-                            android:textColor="@color/text_primary" />
-                        <TextView android:id="@+id/btn_mode_white"
-                            android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                            android:gravity="center" android:text="白名单模式" android:textSize="14sp"
-                            android:padding="10dp" android:background="@drawable/bg_chip_normal"
+                    <LinearLayout android:id="@+id/header_blacklist"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:gravity="center_vertical" android:orientation="horizontal"
+                        android:paddingHorizontal="12dp" android:paddingTop="8dp" android:paddingBottom="4dp"
+                        android:background="?attr/selectableItemBackground">
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:text="黑名单" android:textSize="13sp"
+                            android:textColor="@color/text_primary" android:fontFamily="sans-serif-medium" />
+                        <TextView android:id="@+id/arrow_blacklist" android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" android:text="-" android:textSize="16sp"
                             android:textColor="@color/text_secondary" />
                     </LinearLayout>
+                    <LinearLayout android:id="@+id/panel_blacklist"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="vertical" android:paddingHorizontal="12dp" android:paddingBottom="4dp" />
+                    <LinearLayout android:id="@+id/header_whitelist"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:gravity="center_vertical" android:orientation="horizontal"
+                        android:paddingHorizontal="12dp" android:paddingTop="4dp" android:paddingBottom="4dp"
+                        android:background="?attr/selectableItemBackground">
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:text="白名单" android:textSize="13sp"
+                            android:textColor="@color/text_primary" android:fontFamily="sans-serif-medium" />
+                        <TextView android:id="@+id/arrow_whitelist" android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" android:text="-" android:textSize="16sp"
+                            android:textColor="@color/text_secondary" />
+                    </LinearLayout>
+                    <LinearLayout android:id="@+id/panel_whitelist"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="vertical" android:paddingHorizontal="12dp" android:paddingBottom="4dp" />
                     <TextView android:id="@+id/tv_mode_hint"
                         android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="黑名单���对名单外的所有应用生效" android:textSize="10sp"
-                        android:textColor="@color/text_secondary" android:paddingHorizontal="12dp" android:paddingBottom="8dp" />
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:orientation="horizontal" android:paddingHorizontal="12dp" android:paddingBottom="8dp">
-                        <EditText android:id="@+id/et_filter_pkg"
-                            android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                            android:hint="搜索应用或点 + 选择" android:inputType="text"
-                            android:minHeight="44dp" android:textSize="14sp" />
-                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_add_filter"
-                            android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="添加" android:textSize="14sp" app:cornerRadius="6dp" android:minHeight="44dp" />
-                    </LinearLayout>
-                    <LinearLayout android:id="@+id/list_filters"
+                        android:text="当前：黑名单模式" android:textSize="10sp"
+                        android:textColor="@color/text_secondary" android:paddingHorizontal="12dp" android:paddingBottom="4dp" />
+                    <com.google.android.material.button.MaterialButton android:id="@+id/btn_add_filter"
                         android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:orientation="vertical" android:paddingHorizontal="12dp" android:paddingBottom="8dp" />
+                        android:text="+ 选择应用添�" android:textSize="14sp" app:cornerRadius="6dp"
+                        android:layout_marginHorizontal="12dp" android:layout_marginBottom="8dp" android:minHeight="44dp" />
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -356,7 +372,7 @@
                             android:layout_marginTop="4dp" android:hint="@string/hint_repo_path" android:inputType="text"
                             android:textSize="14sp" android:minHeight="44dp" />
                         <EditText android:id="@+id/et_token" android:layout_width="match_parent" android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp" android:hint="@string/hint_token" android:inputType="textVisiblePassword"
+                            android:layout_marginTop="4dp" android:hint="@string/hint_token" android:inputType="text"
                             android:textSize="14sp" android:minHeight="44dp" />
                         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                             android:layout_marginTop="4dp" android:orientation="horizontal">
@@ -381,7 +397,7 @@
                             android:layout_marginTop="4dp" android:text="仓库：Simiely/android-adskip -> configs/"
                             android:textSize="11sp" android:textColor="@color/text_secondary" />
                         <EditText android:id="@+id/et_cfg_token" android:layout_width="match_parent" android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp" android:hint="GitHub Token" android:inputType="textVisiblePassword"
+                            android:layout_marginTop="4dp" android:hint="GitHub Token" android:inputType="text"
                             android:textSize="14sp" android:minHeight="44dp" />
                         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                             android:layout_marginTop="4dp" android:orientation="horizontal">

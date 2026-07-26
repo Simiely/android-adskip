@@ -39,12 +39,7 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".ui.SettingsActivity"
-            android:exported="false"
-            android:label="@string/title_settings" />
-
-        <!-- 核心：无障碍服务（事件驱动检测 + 自动点击 + 捕获） -->
+        <!-- 核心：无障碍服务 -->
         <service
             android:name=".service.AdSkipAccessibilityService"
             android:exported="false"

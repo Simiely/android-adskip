@@ -58,10 +58,32 @@ class SecurePrefs(context: Context) {
     // 过滤总开关
     fun isFilterEnabled(): Boolean = plainPrefs.getBoolean(KEY_FILTER_ENABLED, true)
     fun setFilterEnabled(v: Boolean) = plainPrefs.edit().putBoolean(KEY_FILTER_ENABLED, v).apply()
-    // 过滤列表（包名集合）
-    fun getFilterList(): Set<String> = plainPrefs.getStringSet(KEY_FILTER_LIST, emptySet()) ?: emptySet()
-    fun addFilterPkg(pkg: String) = plainPrefs.edit().putStringSet(KEY_FILTER_LIST, getFilterList() + pkg).apply()
-    fun removeFilterPkg(pkg: String) = plainPrefs.edit().putStringSet(KEY_FILTER_LIST, getFilterList() - pkg).apply()
+    // 黑名单（独立）
+    fun getBlacklist(): Set<String> = plainPrefs.getStringSet(KEY_BLACKLIST, emptySet()) ?: emptySet()
+    fun addToBlacklist(pkg: String) = plainPrefs.edit().putStringSet(KEY_BLACKLIST, getBlacklist() + pkg).commit()
+    fun removeFromBlacklist(pkg: String) = plainPrefs.edit().putStringSet(KEY_BLACKLIST, getBlacklist() - pkg).commit()
+    // 白名单（独立）
+    fun getWhitelist(): Set<String> = plainPrefs.getStringSet(KEY_WHITELIST, emptySet()) ?: emptySet()
+    fun addToWhitelist(pkg: String) = plainPrefs.edit().putStringSet(KEY_WHITELIST, getWhitelist() + pkg).commit()
+    fun removeFromWhitelist(pkg: String) = plainPrefs.edit().putStringSet(KEY_WHITELIST, getWhitelist() - pkg).commit()
+    // 获取当前模式对应的列表
+    fun getFilterList(): Set<String> = if (getFilterMode()) getBlacklist() else getWhitelist()
+    // 自动添加时，加到当前模式的列表（幂等，内部做所有检查）
+    fun autoAddFilterPkg(pkg: String) {
+        if (pkg.isEmpty()) return
+        val list = if (getFilterMode()) getBlacklist() else getWhitelist()
+        if (pkg in list) return
+        if (getFilterMode()) addToBlacklist(pkg) else addToWhitelist(pkg)
+    }
+    // 移除时，从当前列表移除
+    fun removeFilterPkg(pkg: String) {
+        if (getFilterMode()) removeFromBlacklist(pkg) else removeFromWhitelist(pkg)
+    }
+
+    // 悬浮窗开关（与 KeepAliveService 共用 adskip_prefs 文件）
+    private val capsulePrefs = context.getSharedPreferences("adskip_prefs", Context.MODE_PRIVATE)
+    fun isCapsuleEnabled(): Boolean = capsulePrefs.getBoolean(KEY_CAPSULE, true)
+    fun setCapsuleEnabled(v: Boolean) = capsulePrefs.edit().putBoolean(KEY_CAPSULE, v).apply()
 
     companion object {
         private const val KEY_TOKEN = "gh_token"
@@ -72,8 +94,10 @@ class SecurePrefs(context: Context) {
         private const val KEY_KEYWORD = "keyword_enabled"
         private const val KEY_DISABLED = "disabled_rule"
         private const val KEY_FILTER_MODE = "filter_mode"
-        private const val KEY_FILTER_LIST = "filter_list"
         private const val KEY_FILTER_ENABLED = "filter_enabled"
+        private const val KEY_BLACKLIST = "filter_blacklist"
+        private const val KEY_WHITELIST = "filter_whitelist"
+        private const val KEY_CAPSULE = "capsule"
         private const val KEY_OWNER = "repo_owner"
         private const val KEY_REPO = "repo_name"
         private const val KEY_BRANCH = "repo_branch"
