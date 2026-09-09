@@ -243,7 +243,9 @@ class MainActivity : AppCompatActivity() {
         val overlayOn = Settings.canDrawOverlays(this)
         b.vStatusIcon.setBackgroundResource(if (accOn && overlayOn) R.drawable.bg_status_on else R.drawable.bg_status_off)
         b.tvStatusTitle.text = if (accOn && overlayOn) "服务运行中" else "服务未启动"
-        b.tvStatusSub.text = if (accOn && overlayOn) "无障碍服务已开启" else "请开启权限"
+        b.tvStatusSub.text = if (accOn && overlayOn)
+            "无障碍服务已开启 · v" + runCatching { packageManager.getPackageInfo(packageName, 0).versionName }.getOrNull()
+            else "请开启权限"
         b.switchCapsule.isEnabled = accOn && overlayOn
         if (!b.switchCapsule.isEnabled) b.switchCapsule.isChecked = false
         else b.switchCapsule.isChecked = secure.isCapsuleEnabled()

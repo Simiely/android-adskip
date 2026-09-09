@@ -98,7 +98,7 @@ class LogSection(
                     background = GradientDrawable().apply { setColor(0xFF007AFF.toInt()); cornerRadius = Theme.dp(context, 6).toFloat() }
                     setOnClickListener {
                         ruleStore.addRule(Rule(text = textKey, pkg = log.app, action = "click", viewId = log.viewId.ifEmpty { null }, activity = null, name = textKey))
-                        secure.autoAddFilterPkg(log.app); render(); onRulesChanged?.invoke()
+                        secure.ensurePkgAllowed(log.app); render(); onRulesChanged?.invoke()
                     }
                 }
             })

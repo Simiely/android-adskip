@@ -9,6 +9,7 @@ class FilterGuard(private val secure: SecurePrefs, blockedStore: BlockedRuleStor
 
     /**
      * @return true 表示允许对 pkg 进行自动点击
+     * 优先级（从高到低）：系统关键包屏蔽 > 黑白名单过滤（黑名单最高/白名单放行）
      */
     fun isPkgAllowed(pkg: String): Boolean {
         // 系统关键包永远屏蔽

@@ -72,6 +72,20 @@ class RuleSection(
             textSize = 10f
             setTextColor(ts)
         })
+        // 清空该 App 全部规则
+        header.addView(TextView(context).apply {
+            text = "清空"
+            textSize = 12f
+            setTextColor(0xFFFF3B30.toInt())
+            setPadding(Theme.dp(context, 10), Theme.dp(context, 2), Theme.dp(context, 2), Theme.dp(context, 2))
+            setOnClickListener {
+                AlertDialog.Builder(context)
+                    .setTitle("清空全部规则")
+                    .setMessage("确定删除「$pkg」下的全部 ${rules.size} 条规则吗？")
+                    .setPositiveButton("清空") { _, _ -> ruleStore.clearByPkg(pkg); render() }
+                    .setNegativeButton("取消", null).show()
+            }
+        })
         val panel = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             visibility = View.GONE
@@ -114,6 +128,12 @@ class RuleSection(
                 text = details; textSize = 10f; setTextColor(ts); maxLines = 3
             })
         }
+        infoCol.addView(TextView(context).apply {
+            text = rule.statusNote()
+            textSize = 10f
+            setTextColor(if (rule.approved && rule.misses > 0) 0xFFE67E22.toInt() else if (rule.approved) 0xFF2ECC71.toInt() else ts)
+            setPadding(0, Theme.dp(context, 2), 0, 0)
+        })
         row.addView(infoCol)
 
         // 编辑按钮

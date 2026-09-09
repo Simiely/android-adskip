@@ -126,7 +126,7 @@ class CaptureManager(
         )
         ruleStore.addRule(rule)
 
-        secure.autoAddFilterPkg(pkgName)
+        secure.ensurePkgAllowed(pkgName)
     }
 
     // rootInActiveWindow 由 Service 提供

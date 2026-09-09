@@ -19,6 +19,16 @@ class BlockedRuleStore(context: Context) {
         "com.android.launcher", "com.google.android.apps.nexuslauncher"
     )
 
+    // 内置硬屏蔽（id 级）：启动常驻合并，清空规则也无法移除。
+    // 【固化屏蔽】向日葵"手机投屏/共享屏幕给他人"功能卡(com.oray.sunlogin:id/fl_screen_projection_status)：
+    //   - 它是主界面的"投屏给他人"功能卡片，本身不是广告，点击会弹出投屏授权/功能弹窗；
+    //   - 因与横幅广告同框、且可点击，被匹配器误判为可关闭目标导致误点；
+    //   - 用户明确要求"真正屏蔽、清空也不能移除"，故写死常驻。
+    //   注意：该 id 常与横幅关闭按钮同处一棵树，屏蔽它不影响同包其他关闭规则的命中（匹配器按候选逐个跳过）。
+    private val defaultBlockedIds = listOf(
+        Triple("com.oray.sunlogin", "com.oray.sunlogin:id/fl_screen_projection_status", "")
+    )
+
     data class BlockedRule(val pkg: String, val viewId: String, val text: String)
 
     // ── 读写 ──
@@ -35,6 +45,10 @@ class BlockedRuleStore(context: Context) {
         val result = stored.toMutableSet()
         for (pkg in defaultBlockedPkgs) {
             result.add(listOf(pkg, "", pkg).joinToString(BLOCK_SEP))
+        }
+        // 始终合并内置 id 级硬屏蔽（幂等，清空规则也无法移除）
+        for ((pkg, vid, text) in defaultBlockedIds) {
+            result.add(listOf(pkg, vid, text).joinToString(BLOCK_SEP))
         }
         return result
     }

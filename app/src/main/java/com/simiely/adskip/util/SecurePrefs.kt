@@ -79,6 +79,16 @@ class SecurePrefs(context: Context) {
     fun removeFilterPkg(pkg: String) {
         if (getFilterMode()) removeFromBlacklist(pkg) else removeFromWhitelist(pkg)
     }
+    // 确保某 App 被允许处理：黑名单模式→从黑名单移除（不屏蔽）；白名单模式→加入白名单（放行）。
+    // 与 autoAddFilterPkg（手动“拉黑/加白”管理）语义不同，用于捕获/点单成功等“放行”场景。
+    fun ensurePkgAllowed(pkg: String) {
+        if (pkg.isEmpty()) return
+        if (getFilterMode()) removeFromBlacklist(pkg) else addToWhitelist(pkg)
+    }
+
+    // 一次性迁移标记：仅需执行一次的旧数据修复
+    fun isFilterAutoMigratedV1004(): Boolean = plainPrefs.getBoolean(KEY_AUTO_MIGRATED, false)
+    fun markFilterAutoMigratedV1004() = plainPrefs.edit().putBoolean(KEY_AUTO_MIGRATED, true).apply()
 
     // 悬浮窗开关（与 KeepAliveService 共用 adskip_prefs 文件）
     private val capsulePrefs = context.getSharedPreferences("adskip_prefs", Context.MODE_PRIVATE)
@@ -102,6 +112,7 @@ class SecurePrefs(context: Context) {
         private const val KEY_REPO = "repo_name"
         private const val KEY_BRANCH = "repo_branch"
         private const val KEY_PATH = "repo_path"
+        private const val KEY_AUTO_MIGRATED = "filter_auto_migrated_v1004"
 
         fun hash(input: String): String {
             val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray(Charsets.UTF_8))

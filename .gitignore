@@ -14,3 +14,10 @@
 !adskip-keystore.zip
 /app/build
 /app/release
+# 不要把历史打包/临时产物进索引
+*.zip
+!adskip-keystore.zip
+build_log.txt
+build_exit.txt
+DEVELOPMENT.md
+DEV_README.md
