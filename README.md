@@ -41,6 +41,28 @@
 - Android 8.0+
 - Xiaomi/OPPO/Vivo 等需手动开启"自启动"和"省电无限制"
 
+## 开发者：调试与规则热更新
+
+无需重新构建安装，通过 adb 广播即可动态更新规则、下发调试命令（需手机开启 USB/Wi-Fi 调试，且已开启 AdSkip 无障碍服务）。仓库提供一键脚本 `push_rules.ps1`：
+
+```powershell
+.\push_rules.ps1 set -File rules.json     # 用 JSON 文件整体替换规则
+.\push_rules.ps1 set -Rules '<json>'      # 直接传 JSON 字符串
+.\push_rules.ps1 clear                    # 清空全部规则
+.\push_rules.ps1 clearPkg -Pkg <包名>      # 清空某包规则
+.\push_rules.ps1 dump                     # 转储规则库
+.\push_rules.ps1 state                    # 服务状态（前台/规则数/轮询/已执行数）
+.\push_rules.ps1 tree                     # 转储前台节点树（定位广告元素）
+.\push_rules.ps1 scan                     # 立即触发一次前台扫描
+.\push_rules.ps1 trace [-Off]             # 匹配级追踪（tf开启 / -Off 关闭），定位误触
+.\push_rules.ps1 hist                     # 动作历史（扫描/命中/屏蔽/达上限）
+.\push_rules.ps1 fired                    # 查看本轮已执行规则
+.\push_rules.ps1 firedReset               # 清空已执行集合，重新盯守
+.\push_rules.ps1 pause / resume           # 紧急暂停 / 恢复整个服务
+```
+
+> 广播经由运行中的无障碍服务进程内动态注册的接收器送达（`RuleControlReceiver`），规避澎湃OS对 Manifest 静态接收器的后台执行限制。接收器注册为 `RECEIVER_EXPORTED`——因为 `adb shell am broadcast` 以 shell UID 发送，非导出接收器会拦截送达导致命令失效；这是个人调试接口，可接受此暴露面。
+
 ## 内置固化规则
 
 部分规则已固化进程序（源码写死），随无障碍服务启动自动播种、去重幂等，**清理/清空规则库后仍会自动恢复**。它们属于"手动规则"，不会被自动学习机制停用。

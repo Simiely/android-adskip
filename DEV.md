@@ -149,3 +149,27 @@ GitHub Contents API 更新现有文件时必须提供当前版本的 sha。首�
 - `getInstalledApplications()` 受包可见性限制，需在 manifest 中声明 `<queries>`
 - 使用 `queryIntentActivities` 替代 `getInstalledApplications`
 - 省电策略 → 无限制；自启动 → 开启；多任务 → 锁定
+
+## 规则生命周期（RuleLifecycle 学习引擎）
+
+规则闭环"点击后发生了什么"收敛在 `service/learning/RuleLifecycle.kt`，`AdSkipAccessibilityService` 回归纯编排：
+
+- **已执行集合**：`markFired`/`reset`/`hasPendingRuleFor`——决定前台轮询该 App 是否还有"未执行规则"需要盯守。
+- **结果验证**：`scheduleVerification`——点击后 700ms 复查目标是否消失：消失 → `RuleStore.learnFromHit(累计转正)`；仍在 → `recordMiss(连错可降级停用)`。只有"弹窗真的消失"才当成可信命中。
+- **归属**：`RuleStore` 只负责落库与状态机，`RuleLifecycle` 负责"何时触发学习/验证"，各自单一职责。
+
+### 调试接口（动态广播接收器）
+
+`service/RuleControlReceiver.kt` 在无障碍服务 `onCreate` 动态注册，adb 广播直达运行中的进程，规避澎湃OS 对 Manifest 静态接收器的后台执行限制。
+
+- **必须 `RECEIVER_EXPORTED`**：`adb shell am broadcast` 以 shell UID（≠应用 UID）发送。若用 `RECEIVER_NOT_EXPORTED`，非导出接收器会拦截其他 UID 的送达，导致全部调试命令静默失效（已踩坑）。个人调试接口可接受此暴露面。
+- 服务级命令通过 `AdSkipAccessibilityService.instance` 触发；规则级命令（set/clear/clearPkg/dump）直接读写 `RuleStore`。
+- 常用调参动作：紧急 `pause` 叫停误触 → `trace` 看匹配级命中/尺寸闸门拒绝原因 → `hist` 回看动作历史 → 定位后改规则 `set` 热更新，全程无需重装。
+
+### 上溯可点击祖先（已统一为单一实现）
+
+`AccessibilityUtil.findNearestClickable(node, maxDepth)` 是唯一的上溯遍历实现，所有便捷函数（`isClickable`/`resolveClickable`/`resolveToNearestClickable`/`findClickableAncestorQuick`）都是它的薄封装，各自保留原有层数与回退语义。**新增上溯逻辑一律复用该核心，勿再造一份遍历。**
+
+### 清理约定
+
+- 曾有"位置启发式 B 方案"`scanByPositionHeuristic`（右上角小按钮坐标兜底），因误触风险高、无调用方已整体删除。新增扫描策略须先评估误触面，禁用废弃分支要及时删除而非注释保留。
