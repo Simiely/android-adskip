@@ -12,18 +12,22 @@ object Logger {
     var isDebug: Boolean = false
 
     fun d(msg: String) {
+        DebugLog.add(msg)
         if (isDebug) Log.d(TAG, msg)
     }
 
     fun w(msg: String, e: Throwable? = null) {
+        DebugLog.add("W: $msg")
         if (e != null) Log.w(TAG, msg, e) else Log.w(TAG, msg)
     }
 
     fun e(msg: String, e: Throwable? = null) {
+        DebugLog.add("E: $msg")
         if (e != null) Log.e(TAG, msg, e) else Log.e(TAG, msg)
     }
 
     fun i(msg: String) {
+        DebugLog.add("I: $msg")
         Log.i(TAG, msg)
     }
 }

@@ -6,6 +6,7 @@ import com.simely.adskip.model.Rule
 import com.simely.adskip.service.matcher.RuleMatcher
 import com.simely.adskip.store.StatsStore
 import com.simely.adskip.util.AccessibilityUtil
+import com.simely.adskip.util.ActionHistory
 import com.simely.adskip.util.AdFeature
 import com.simely.adskip.util.Logger
 import com.simely.adskip.util.SecurePrefs
@@ -34,17 +35,24 @@ class ClickExecutor(
     /** 点击计数（用于定期清理冷却 Map） */
     private var clickCount = 0
 
-    /** 会话级每按钮点击次数：同一按钮连续点满上限后，本次会话不再点，避免"广告点不掉/常驻按钮"被无限连点 */
-    private val sessionClickCount = mutableMapOf<String, Int>()
+    /** 会话级每按钮点击次数：同一按钮（按 坐标+viewId+text 区分）点满上限后停止，避免"广告点不掉/常驻按钮"被无限连点。
+     *  value = (已点次数, 最后点击时间)。切屏时只淘汰很久未点的旧记录，近期计数保留，防止"点错→跳页→切屏清计数"死循环。 */
+    private val sessionClickCount = mutableMapOf<String, Pair<Int, Long>>()
 
-    /** 新界面上下文（切屏/换 Activity）时清空会话计数，让新广告对应的按钮可以再次被跳过 */
-    fun resetSession() = sessionClickCount.clear()
+    /** 切屏/换 Activity 时调用：仅淘汰 30 秒内未发生点击的旧计数，让真实的新广告可再次被跳过 */
+    fun resetSession() {
+        val now = System.currentTimeMillis()
+        sessionClickCount.entries.removeAll { now - it.value.second > SESSION_RESET_IDLE_MS }
+    }
 
     companion object {
         private const val COOLDOWN_MS = 800L
 
         /** 每 N 次冷却查询后清理一次过期条目 */
         private const val CLEANUP_INTERVAL = 100
+
+        /** 会话计数在停止点击这么久后作废（让稍后的真实新广告能再点） */
+        private const val SESSION_RESET_IDLE_MS = 30_000L
 
         /**
          * 视为"容器型节点"的屏幕覆盖比例上限。
@@ -53,7 +61,7 @@ class ClickExecutor(
          */
         private const val CONTAINER_COVER_RATIO = 0.65f
 
-        /** 同一按钮本次会话最多点击次数：点满即止，直到切屏/换界面才重置 */
+        /** 同一按钮最多点击次数：点满即止（近期计数不会被切屏清掉，避免死循环） */
         private const val MAX_SESSION_CLICKS = 3
     }
 
@@ -77,6 +85,7 @@ class ClickExecutor(
             // 点它会点空/点中广告卡而非 ✕。真正的关闭 ✕ 尺寸远小于该类阈值。
             if (isContainerLike(clickable)) {
                 Logger.d("[$pkg] 跳过容器节点 vid=${clickable.viewIdResourceName ?: "无"}")
+                ActionHistory.record("跳过", "[$pkg] 容器节点 vid=${clickable.viewIdResourceName ?: "无"}")
                 continue
             }
 
@@ -89,11 +98,15 @@ class ClickExecutor(
             if (blocked) {
                 onVisualFeedback?.invoke("⛔ 已屏蔽 $btnText")
                 Logger.d("[$pkg] 候选被屏蔽 text=$btnText vid=$btnVid")
+                ActionHistory.record("屏蔽", "[$pkg] text=$btnText vid=$btnVid")
                 continue // 只跳过该候选，不要中止整轮；否则队列里靠后的真正关闭✕再也点不到
             }
 
             // 冷却检查
-            val key = "$pkg|${clickable.viewIdResourceName ?: clickable.text?.toString() ?: ""}"
+            val cb = Rect()
+            clickable.getBoundsInScreen(cb)
+            val key = "$pkg|${cb.left},${cb.top},${cb.right},${cb.bottom}|" +
+                "${clickable.viewIdResourceName ?: clickable.text?.toString() ?: ""}"
             val now = System.currentTimeMillis()
             val since = now - (lastClick[key] ?: 0L)
             if (since < COOLDOWN_MS) {
@@ -101,11 +114,12 @@ class ClickExecutor(
                 continue
             }
 
-            // 会话点击上限：同一按钮连续点满 MAX_SESSION_CLICKS 次后停止，
-            // 防止"广告点不掉/常驻按钮"被无限重复点击。切屏/换界面时由 Service 调 resetSession() 重置。
-            val sessionTimes = sessionClickCount[key] ?: 0
-            if (sessionTimes >= MAX_SESSION_CLICKS) {
-                Logger.d("[$pkg] 同按钮已点满 $MAX_SESSION_CLICKS 次，本次会话不再点击 key=$key")
+            // 会话点击上限：同一按钮（按坐标+viewId+text 区分）点满 MAX_SESSION_CLICKS 次后停止，
+            // 防止"广告点不掉/常驻按钮"被无限重复点击。近期计数不会被切屏清掉，杜绝"点错→跳页→死循环"。
+            val (st, _) = sessionClickCount[key] ?: (0 to 0L)
+            if (st >= MAX_SESSION_CLICKS) {
+                Logger.d("[$pkg] 同按钮已点满 $MAX_SESSION_CLICKS 次，本次运行不再点击 key=$key")
+                ActionHistory.record("达上限", "[$pkg] 已点满${MAX_SESSION_CLICKS}次 key=$key")
                 continue
             }
 
@@ -113,7 +127,8 @@ class ClickExecutor(
             lastClick[key] = now
             val success = clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
             Logger.d("[$pkg] 点击 ${if (success) "成功" else "失败"} text=$btnText vid=$clickable.viewIdResourceName")
-            if (success) sessionClickCount[key] = sessionTimes + 1
+            ActionHistory.record("点击", "[$pkg] ${if (success) "成功" else "失败"} text=$btnText vid=$clickable.viewIdResourceName")
+            if (success) sessionClickCount[key] = (st + 1) to now
 
             val vid = clickable.viewIdResourceName ?: ""
             val txt = node.text?.toString()?.ifEmpty { clickable.text?.toString() } ?: ""

@@ -17,6 +17,12 @@ data class Rule(
     val name: String?,
     val contentDescription: String? = null,
     val className: String? = null,
+    /**
+     * 坐标固化匹配：屏幕上的绝对矩形 [left, top, right, bottom]。
+     * 用于既无 viewId/text/描述、也无 className 可依的"纯位置按钮"（如波点开屏广告右上角X）。
+     * 非空时，匹配器只接收集合矩形内可点击节点；null 表示不启用坐标匹配。
+     */
+    val bounds: List<Int>? = null,
     /** 已被可信路径成功点击的次数（自动捕获的确认证据） */
     val hits: Int = 0,
     /** true=转正可直接自动点击；false=候选，仅可信路径再次命中时才累计 hits 并升级 */
@@ -39,6 +45,7 @@ data class Rule(
         put("name", name ?: JSONObject.NULL)
         put("cd", contentDescription ?: JSONObject.NULL)
         put("clz", className ?: JSONObject.NULL)
+        put("bounds", bounds?.let { JSONObject().apply { put("l", it[0]); put("t", it[1]); put("r", it[2]); put("b", it[3]) } } ?: JSONObject.NULL)
         put("hits", hits)
         put("approved", approved)
         put("createdAt", createdAt)
@@ -73,8 +80,10 @@ data class Rule(
         }
 
     /** 判定为"危险范式"：无任何可定位信息（仅 className/空），匹配时会泛滥命中整类控件 */
-    fun isDangerousPattern(): Boolean =
-        contentDescription.isNullOrBlank() && text.isNullOrBlank() && viewId.isNullOrBlank()
+    fun isDangerousPattern(): Boolean {
+        if (!bounds.isNullOrEmpty()) return false // 有坐标定位就不算危险
+        return contentDescription.isNullOrBlank() && text.isNullOrBlank() && viewId.isNullOrBlank()
+    }
 
     /**
      * 指定性分数：字段越精确、标识越强，分数越高。
@@ -89,6 +98,7 @@ data class Rule(
         if (t.isNotEmpty()) score += 20 + t.length.coerceAtMost(30)
         if (c.isNotEmpty()) score += 20 + c.length.coerceAtMost(30)
         if (!className.isNullOrBlank()) score += 8
+        if (!bounds.isNullOrEmpty()) score += 60 // 显式坐标是强定位，仅次于 viewId
         return score
     }
 
@@ -107,6 +117,10 @@ data class Rule(
             name = if (o.isNull("name")) null else o.optString("name").takeIf { it.isNotEmpty() },
             contentDescription = if (o.isNull("cd")) null else o.optString("cd").takeIf { it.isNotEmpty() },
             className = if (o.isNull("clz")) null else o.optString("clz").takeIf { it.isNotEmpty() },
+            bounds = if (o.isNull("bounds")) null else {
+                val bo = o.getJSONObject("bounds")
+                listOf(bo.optInt("l"), bo.optInt("t"), bo.optInt("r"), bo.optInt("b"))
+            },
             hits = o.optInt("hits", 0),
             approved = o.optBoolean("approved", true),
             createdAt = o.optLong("createdAt", System.currentTimeMillis()),
@@ -116,6 +130,7 @@ data class Rule(
         )
     }
 
-    /** 去重用的指纹键（含 className，避免仅类名不同的规则被误删） */
-    fun fingerprint(): String = "${pkg}|${activity ?: ""}|${viewId ?: ""}|${text ?: ""}|${contentDescription ?: ""}|${className ?: ""}"
+    /** 去重用的指纹键（含 className 与 bounds，避免仅类名/坐标不同的规则被误删） */
+    fun fingerprint(): String =
+        "${pkg}|${activity ?: ""}|${viewId ?: ""}|${text ?: ""}|${contentDescription ?: ""}|${className ?: ""}|${bounds ?: ""}"
 }

@@ -62,5 +62,7 @@
                 android:value="本服务用于维持无障碍跳过广告功能的悬浮窗常驻运行" />
         </service>
 
+        <!-- 调试用规则热更新接口：在无障碍服务进程内动态注册(RuleControlReceiver)，
+             adb 广播直接送达运行中的进程，规避澎湃OS对 Manifest 静态接收器的后台执行限制。 -->
     </application>
 </manifest>

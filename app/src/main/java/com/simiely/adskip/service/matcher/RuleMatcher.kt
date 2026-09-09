@@ -7,6 +7,7 @@ import com.simely.adskip.store.BlockedRuleStore
 import com.simely.adskip.store.KeywordStore
 import com.simely.adskip.store.RuleStore
 import com.simely.adskip.util.AccessibilityUtil
+import com.simely.adskip.util.DebugFlags
 import com.simely.adskip.util.Logger
 
 /**
@@ -32,6 +33,9 @@ class RuleMatcher(
         val activeRules = ruleStore.allRules()
             .filter { r ->
                 if (r.pkg != pkg || r.disabled) return@filter false
+                // 危险范式（仅有 className、无任何定位信息）永不参与点击：会泛滥命中整类控件（如所有 ImageView），
+                // 且不区分已转正/候选。真正的坐标/文字/viewId 规则不受影响。
+                if (r.isDangerousPattern()) return@filter false
                 if (r.activity.isNullOrEmpty() || activity.isNullOrEmpty()) return@filter true
                 r.activity == activity
             }
@@ -39,6 +43,8 @@ class RuleMatcher(
         for (rule in activeRules) {
             if (targets.size >= MAX_TARGETS) break
             val hits = findByRule(root, rule).filter { AccessibilityUtil.isClickable(it) }
+            if (DebugFlags.traceEnabled)
+                Logger.d("  [trace] 规则[${rule.pkg}|${rule.name}]: ${rule.shortDescription()} → 命中可点节点=${hits.size}")
             if (hits.isNotEmpty())
                 Logger.d("  → 规则命中[${rule.shortDescription()}] 节点=${hits.size}")
             targets.addAll(hits)
@@ -92,6 +98,31 @@ class RuleMatcher(
                 runCatching { node.parent?.className?.toString() }.getOrNull() == classConstraint
         }
 
+        if (!rule.bounds.isNullOrEmpty()) {
+            // 坐标固化匹配（无 viewId/text/className 依赖的纯位置按钮，如波点开屏广告X）：
+            // 收集"屏幕坐标与规则矩形相交"的可点击节点，再选其中面积最小者（真正的按钮是最小那一个，
+            // 避免规则矩形同时盖住左侧相邻大图时误点）。若规则带 className 则在其上再过滤。
+            val target = Rect(
+                rule.bounds[0], rule.bounds[1], rule.bounds[2], rule.bounds[3]
+            )
+            val candidates = mutableListOf<Pair<AccessibilityNodeInfo, Int>>()
+            collectNodesInBounds(root, target, candidates, 10)
+            candidates.sortBy { it.second } // 面积升序，最小的按钮排最前
+            // 尺寸闸门：真正的关闭 ✕ 都是小控件。候选若是宽或高超过阈值（横幅/大卡片/全屏容器，
+            // 如"导入歌单"横幅 Rect(0,672 - 1080,891) 误配弹窗X坐标），一票否决，绝不让大块可点击区域冒充 ✕。
+            val hits = candidates
+                .filter { (node, area) ->
+                    val b = Rect()
+                    runCatching { node.getBoundsInScreen(b) }.getOrNull() ?: return@filter false
+                    val sizeOk = b.width() <= MAX_CLOSE_DIMEN && b.height() <= MAX_CLOSE_DIMEN
+                    if (DebugFlags.traceEnabled && !sizeOk)
+                        Logger.d("    [trace] 坐标规则${rule.bounds} 候选尺寸超闸门跳过 bounds=$b area=$area class=${node.className?.toString()?.substringAfterLast('.')}")
+                    sizeOk
+                }
+                .map { it.first }
+            return if (classConstraint == null) hits else hits.filter { matchesConstraint(it) }
+        }
+
         if (!rule.viewId.isNullOrEmpty()) {
             val byId = runCatching { root.findAccessibilityNodeInfosByViewId(rule.viewId) }
                 .getOrDefault(emptyList())
@@ -110,6 +141,33 @@ class RuleMatcher(
         return emptyList()
     }
 
+    /** 收集屏幕坐标与目标矩形相交的可点击节点，并记录其面积（bounds 坐标匹配专用）。
+     *  叶节点命中后仍向下遍历，以找到最内层的最小可点击按钮。 */
+    private fun collectNodesInBounds(
+        node: AccessibilityNodeInfo,
+        target: Rect,
+        out: MutableList<Pair<AccessibilityNodeInfo, Int>>,
+        depth: Int
+    ) {
+        if (depth < 0 || out.size >= 20) return
+        try {
+            val r = Rect()
+            node.getBoundsInScreen(r)
+            val intersects = r.intersect(target) || target.intersect(r)
+            if (node.isClickable && intersects && r.width() > 0 && r.height() > 0) {
+                out.add(node to (r.width() * r.height()))
+            }
+            val childCount = node.childCount
+            if (childCount > 64) return
+            for (i in 0 until childCount) {
+                node.getChild(i)?.let {
+                    collectNodesInBounds(it, target, out, depth - 1)
+                    if (out.none { p -> p.first == it }) it.recycle()
+                }
+            }
+        } catch (_: Exception) {}
+    }
+
     fun isBlocked(pkg: String, text: String?, viewId: String?) =
         blockedRuleStore.isBlocked(pkg, text, viewId)
 
@@ -119,5 +177,8 @@ class RuleMatcher(
     companion object {
         /** 一轮匹配最多保留的候选目标数，避免高频事件下过量处理 */
         private const val MAX_TARGETS = 12
+        /** 真正的关闭/跳过按钮都是小控件，超过此尺寸（px）的候选一律排除（避免横幅/大卡片误配坐标）。
+         *  当前你的手机屏宽 1080px，440px 约占屏宽 2/5，关闭按钮很少超过这个尺寸。*/
+        private const val MAX_CLOSE_DIMEN = 440
     }
 }

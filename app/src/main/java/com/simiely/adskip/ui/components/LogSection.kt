@@ -1,7 +1,11 @@
 package com.simely.adskip.ui.components
 
+import android.content.ClipData
 import android.content.Context
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -10,6 +14,7 @@ import com.simely.adskip.store.BlockedRuleStore
 import com.simely.adskip.store.RuleStore
 import com.simely.adskip.store.StatsStore
 import com.simely.adskip.ui.theme.Theme
+import com.simely.adskip.util.DebugLog
 import com.simely.adskip.util.SecurePrefs
 
 class LogSection(
@@ -23,10 +28,19 @@ class LogSection(
     private val tp get() = Theme.textPrimary(context)
     private val ts get() = Theme.textSecondary(context)
     private var showAllLogs = false
+    private var debugMode = false
+    private val debugRefresher = Handler(Looper.getMainLooper())
+    private val debugTick = object : Runnable {
+        override fun run() { if (debugMode) render() }
+    }
     var onRulesChanged: (() -> Unit)? = null
 
     fun render() {
         listLogs.removeAllViews()
+        addDebugToggleBar()
+        if (debugMode) { renderDebugBody(); scheduleDebugRefresh(); return }
+        debugRefresher.removeCallbacks(debugTick)
+        // — 下面是"操作记录"渲染 —
         val logs = stats.getRecentLogs(if (showAllLogs) 100 else 10).sortedByDescending { log ->
             val textKey = log.text.ifEmpty { log.app }
             if (blockedStore.isBlocked(log.app, log.text.ifEmpty { null }, log.viewId.ifEmpty { null })) 1
@@ -133,5 +147,93 @@ class LogSection(
             setOnClickListener { stats.clearLogs(); render() }
         })
         listLogs.addView(btnRow)
+    }
+
+    // ── 调试日志部分 ──
+
+    private fun scheduleDebugRefresh() {
+        debugRefresher.postDelayed(debugTick, 1000) // 每秒刷新一次
+    }
+
+    private fun addDebugToggleBar() {
+        val bar = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, 0, 0, Theme.dp(context, 8))
+        }
+        bar.addView(TextView(context).apply {
+            text = if (debugMode) "切换为 操作记录" else "切换为 调试日志"
+            textSize = 13f
+            setTextColor(0xFF007AFF.toInt())
+            setPadding(Theme.dp(context, 8), Theme.dp(context, 4), Theme.dp(context, 8), Theme.dp(context, 4))
+            background = GradientDrawable().apply {
+                setColor(0x18007AFF.toInt())
+                cornerRadius = Theme.dp(context, 4).toFloat()
+            }
+            setOnClickListener {
+                debugMode = !debugMode
+                render()
+            }
+        })
+        if (debugMode) {
+            bar.addView(TextView(context).apply {
+                text = "清空"
+                textSize = 13f
+                setTextColor(0xFFFF3B30.toInt())
+                val lp = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                lp.leftMargin = Theme.dp(context, 8)
+                layoutParams = lp
+                setPadding(Theme.dp(context, 8), Theme.dp(context, 4), Theme.dp(context, 8), Theme.dp(context, 4))
+                background = GradientDrawable().apply {
+                    setColor(0x18FF3B30.toInt())
+                    cornerRadius = Theme.dp(context, 4).toFloat()
+                }
+                setOnClickListener { DebugLog.clear(); render() }
+            })
+            bar.addView(TextView(context).apply {
+                text = "复制"
+                textSize = 13f
+                setTextColor(0xFFFFFFFF.toInt())
+                val lp = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                lp.leftMargin = Theme.dp(context, 8)
+                layoutParams = lp
+                setPadding(Theme.dp(context, 8), Theme.dp(context, 4), Theme.dp(context, 8), Theme.dp(context, 4))
+                background = GradientDrawable().apply {
+                    setColor(0xFF007AFF.toInt())
+                    cornerRadius = Theme.dp(context, 4).toFloat()
+                }
+                setOnClickListener {
+                    val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                    cm.setPrimaryClip(ClipData.newPlainText("AdSkip Debug Log", DebugLog.snapshot()))
+                    android.widget.Toast.makeText(context, "已复制到剪贴板", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            })
+        }
+        listLogs.addView(bar)
+    }
+
+    private fun renderDebugBody() {
+        val lines = DebugLog.lines(120)
+        if (lines.isEmpty()) {
+            listLogs.addView(TextView(context).apply {
+                text = "暂无调试日志（出现广告后会自动记录执行轨迹）"
+                textSize = 12f
+                setTextColor(ts)
+                setPadding(Theme.dp(context, 12), Theme.dp(context, 8), Theme.dp(context, 12), Theme.dp(context, 8))
+            })
+            return
+        }
+        lines.forEach { line ->
+            listLogs.addView(TextView(context).apply {
+                text = line
+                textSize = 11f
+                typeface = Typeface.MONOSPACE
+                setTextColor(tp)
+                setPadding(0, Theme.dp(context, 2), 0, Theme.dp(context, 2))
+            })
+        }
     }
 }

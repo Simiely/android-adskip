@@ -38,51 +38,40 @@ object AccessibilityUtil {
     private const val HIGHLIGHT_MAX_H = 500
 
     /**
-     * 判断节点自身或其祖先是否可点击。
-     * 大多数 App 的按钮是外层容器 clickable，内层 TextView 不 clickable。
+     * 上溯查找最近可点击节点的唯一核心实现（含节点自身）。
+     * 其余便捷函数均基于此，避免同一遍历逻辑被重复实现多份。
+     * @param maxDepth 允许上溯的祖先层级上限
+     * @return 最近的可点击节点；maxDepth 内没有则返回 null
      */
-    fun isClickable(node: AccessibilityNodeInfo): Boolean {
-        if (node.isClickable) return true
-        var p = node.parent
+    private fun findNearestClickable(node: AccessibilityNodeInfo, maxDepth: Int): AccessibilityNodeInfo? {
+        var current: AccessibilityNodeInfo? = node
         var depth = 0
-        while (p != null && depth < MAX_ANCESTOR_DEPTH) {
-            if (p.isClickable) return true
-            p = p.parent
-            depth++
-        }
-        return false
-    }
-
-    /**
-     * 将匹配到的文本节点解析到最近的可点击祖先。
-     * @return 可点击祖先节点，或 null 如果找不到
-     */
-    fun resolveClickable(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
-        if (node.isClickable) return node
-        var p = node.parent
-        var depth = 0
-        while (p != null && depth < MAX_ANCESTOR_DEPTH) {
-            if (p.isClickable) return p
-            p = p.parent
+        while (current != null && depth <= maxDepth) {
+            if (current.isClickable) return current
+            current = current.parent
             depth++
         }
         return null
     }
 
+    /** 判断节点自身或其祖先是否可点击（大多数 App 的按钮是外层容器 clickable，内层 TextView 不 clickable） */
+    fun isClickable(node: AccessibilityNodeInfo): Boolean =
+        findNearestClickable(node, MAX_ANCESTOR_DEPTH) != null
+
+    /** 将匹配到的文本节点解析到最近的可点击祖先；找不到返回 null */
+    fun resolveClickable(node: AccessibilityNodeInfo): AccessibilityNodeInfo? =
+        findNearestClickable(node, MAX_ANCESTOR_DEPTH)
+
+    /** 上溯到最近的可点击祖先（最多 8 层），用于捕获模式下确保捕获的是按钮本体。找不到时回退为原节点 */
+    fun resolveToNearestClickable(node: AccessibilityNodeInfo): AccessibilityNodeInfo =
+        findNearestClickable(node, 8) ?: node
+
     /**
-     * 从子节点上溯到最近的可点击祖先（最多 8 层），用于捕获模式下确保捕获的是按钮本体。
+     * 快速上溯至多 3 层找最近可点击节点（含自身）；没有则 null。
+     * 供各树扫描器做"是否值得解析"的栅栏判断，替代重复的 hasClickableAncestorQuick。
      */
-    fun resolveToNearestClickable(node: AccessibilityNodeInfo): AccessibilityNodeInfo {
-        if (node.isClickable) return node
-        var p = node.parent
-        var depth = 0
-        while (p != null && depth < 8) {
-            if (p.isClickable) return p
-            p = p.parent
-            depth++
-        }
-        return node
-    }
+    private fun findClickableAncestorQuick(node: AccessibilityNodeInfo): AccessibilityNodeInfo? =
+        findNearestClickable(node, 3)
 
     // ── 高亮扫描 ──
 
@@ -105,7 +94,7 @@ object AccessibilityUtil {
     ) {
         if (depth > HIGHLIGHT_MAX_DEPTH || out.size >= HIGHLIGHT_MAX_NODES) return
         try {
-            if (node.isClickable || hasClickableAncestorQuick(node)) {
+            if (findClickableAncestorQuick(node) != null) {
                 val r = Rect()
                 node.getBoundsInScreen(r)
                 val key = "${r.left},${r.top},${r.right},${r.bottom}"
@@ -124,90 +113,9 @@ object AccessibilityUtil {
         } catch (_: Exception) {}
     }
 
-    /** 快速判断是否有可点击祖先（查 3 层），捕获模式专用 */
-    private fun hasClickableAncestorQuick(node: AccessibilityNodeInfo): Boolean {
-        var p = node.parent
-        var i = 0
-        while (p != null && i < 3) {
-            if (p.isClickable) return true
-            p = p.parent
-            i++
-        }
-        return false
-    }
-
     // ── 节点查找 ──
 
-    // ── B 方案：位置启发式扫描 ──
-
-    /** 疑似跳过/关闭按钮的尺寸约束 */
-    private const val SKIP_MIN_W = 40
-    private const val SKIP_MAX_W = 160
-    private const val SKIP_MIN_H = 24
-    private const val SKIP_MAX_H = 72
-
-    /**
-     * 位置启发式：扫描右上角区域的可点击小按钮（严格约束）。
-     * 仅用于文本匹配 + contentDescription 都失败后的最后兜底。
-     */
-    fun scanByPositionHeuristic(
-        root: AccessibilityNodeInfo,
-        screenW: Int,
-        screenH: Int
-    ): List<AccessibilityNodeInfo> {
-        val candidates = mutableListOf<AccessibilityNodeInfo>()
-        scanPositionRecursive(root, candidates, screenW, screenH, 0)
-        // 按右上优先级排序：越靠右上越靠前
-        candidates.sortByDescending { node ->
-            val r = Rect()
-            node.getBoundsInScreen(r)
-            r.right - r.top  // right 越大 = 越靠右，top 越小 = 越靠上，差值越大越优先
-        }
-        return candidates
-    }
-
-    private fun scanPositionRecursive(
-        node: AccessibilityNodeInfo,
-        out: MutableList<AccessibilityNodeInfo>,
-        screenW: Int,
-        screenH: Int,
-        depth: Int
-    ) {
-        if (depth > 8 || out.size >= 30) return
-        try {
-            if (node.isClickable || hasClickableAncestorQuick(node)) {
-                val clickable = if (node.isClickable) node else resolveToNearestClickable(node)
-                val r = Rect()
-                clickable.getBoundsInScreen(r)
-                // 严格约束：右上角 35% 宽度 × 18% 高度区域
-                if (r.left > screenW * 0.65f &&
-                    r.top < screenH * 0.18f &&
-                    r.width() in SKIP_MIN_W..SKIP_MAX_W &&
-                    r.height() in SKIP_MIN_H..SKIP_MAX_H &&
-                    r.left >= 0 && r.top >= 0
-                ) {
-                    // 去重
-                    val key = "${r.left},${r.top},${r.right},${r.bottom}"
-                    if (out.none {
-                            val or = Rect(); it.getBoundsInScreen(or)
-                            "${or.left},${or.top},${or.right},${or.bottom}" == key
-                        }
-                    ) {
-                        out.add(clickable)
-                        return  // 已添加 clickable，不回收
-                    }
-                }
-            }
-            for (i in 0 until node.childCount.coerceAtMost(30)) {
-                node.getChild(i)?.let {
-                    scanPositionRecursive(it, out, screenW, screenH, depth + 1)
-                    if (it !in out) it.recycle()
-                }
-            }
-        } catch (_: Exception) {}
-    }
-
-    // ── C 方案：contentDescription 扫描 ──
+    // ── 方案：contentDescription 扫描 ──
 
     /**
      * 遍历树，搜索 contentDescription 包含关键词的可点击节点。
@@ -232,10 +140,8 @@ object AccessibilityUtil {
         try {
             val cd = node.contentDescription?.toString() ?: ""
             val txt = node.text?.toString() ?: ""
-            if ((cd.contains(keyword, ignoreCase = true) || txt.contains(keyword, ignoreCase = true)) &&
-                (node.isClickable || hasClickableAncestorQuick(node))
-            ) {
-                val clickable = if (node.isClickable) node else resolveToNearestClickable(node)
+            if (cd.contains(keyword, ignoreCase = true) || txt.contains(keyword, ignoreCase = true)) {
+                val clickable = findClickableAncestorQuick(node)
                 if (clickable != null && clickable !in out) {
                     out.add(clickable)
                     return
@@ -278,8 +184,8 @@ object AccessibilityUtil {
             val cd = node.contentDescription?.toString() ?: ""
             val combined = "$txt $cd"
             val matched = SKIP_KEYWORDS.any { combined.contains(it, ignoreCase = true) }
-            if (matched && (node.isClickable || hasClickableAncestorQuick(node))) {
-                val clickable = if (node.isClickable) node else resolveToNearestClickable(node)
+            if (matched) {
+                val clickable = findClickableAncestorQuick(node)
                 if (clickable != null && clickable !in out) {
                     out.add(clickable)
                     return
@@ -335,10 +241,8 @@ object AccessibilityUtil {
     ) {
         if (depth > 6 || out.size >= 30) return
         try {
-            if (isLikelySkipOrClose(node, screenW, screenH) &&
-                (node.isClickable || hasClickableAncestorQuick(node))
-            ) {
-                val clickable = if (node.isClickable) node else resolveToNearestClickable(node)
+            if (isLikelySkipOrClose(node, screenW, screenH)) {
+                val clickable = findClickableAncestorQuick(node)
                 if (clickable != null && clickable !in out) {
                     out.add(clickable)
                     return
