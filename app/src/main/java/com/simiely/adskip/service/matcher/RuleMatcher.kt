@@ -140,6 +140,15 @@ class RuleMatcher(
                 .getOrDefault(emptyList())
             if (byId.isNotEmpty()) return byId.filter { matchesConstraint(it) && matchesAncestor(it, rule.ancestorViewId) }
         }
+        // contentDescription 精确匹配：系统 API findAccessibilityNodeInfosByText 只查 text、不查 contentDescription，
+        // 若直接塞进 textCandidates 会让"仅凭 cd 定位"的规则永远命中 0（如通用角标 rule『波点广告角标关闭』= desc"广告"）。
+        // 这里用递归扫描精确比对 cd，配合 className 交叉约束收敛到真正的目标（如广告右下角可点 ImageView）。
+        if (!rule.contentDescription.isNullOrBlank()) {
+            val byDesc = mutableListOf<AccessibilityNodeInfo>()
+            collectByContentDescription(root, rule.contentDescription, classConstraint, byDesc, 0)
+            if (byDesc.isNotEmpty())
+                return byDesc.filter { matchesAncestor(it, rule.ancestorViewId) }
+        }
         val results = mutableListOf<AccessibilityNodeInfo>()
         for (c in rule.textCandidates()) {
             runCatching { root.findAccessibilityNodeInfosByText(c) }
@@ -180,6 +189,37 @@ class RuleMatcher(
         }
         runCatching { cur.recycle() }
         return false
+    }
+
+    /**
+     * 深度优先收集 contentDescription 精确等值于 desc 的节点（配合可选 className 交叉约束）。
+     * 系统 findAccessibilityNodeInfosByText 不搜索 contentDescription，故手写遍历。
+     */
+    private fun collectByContentDescription(
+        node: AccessibilityNodeInfo,
+        desc: String,
+        classConstraint: String?,
+        out: MutableList<AccessibilityNodeInfo>,
+        depth: Int
+    ) {
+        if (depth > 16 || out.size >= 20) return
+        try {
+            val cd = node.contentDescription?.toString()
+            if (!cd.isNullOrBlank() && (cd == desc || cd.contains(desc)) &&
+                (classConstraint == null || node.className?.toString() == classConstraint)
+            ) {
+                if (!out.any { it == node }) out.add(node)
+            }
+            val cnt = runCatching { node.childCount }.getOrDefault(0)
+            if (cnt in 1..64) {
+                for (i in 0 until cnt) {
+                    val child = runCatching { node.getChild(i) }.getOrNull() ?: continue
+                    val before = out.size
+                    collectByContentDescription(child, desc, classConstraint, out, depth + 1)
+                    if (out.size == before) runCatching { child.recycle() }
+                }
+            }
+        } catch (_: Exception) {}
     }
 
     /** 收集屏幕坐标与目标矩形相交的可点击节点，并记录其面积（bounds 坐标匹配专用）。
