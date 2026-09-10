@@ -97,6 +97,16 @@ class RuleStore(context: Context) {
                 parentDesc = "23",
                 parentClass = "android.view.View",
                 childIndex = 0
+            ),
+            // 插屏/开屏视频广告全屏层 content-desc="关闭"，关闭按钮 X 常隔一层全屏遮罩 View，
+            // 是其子树内第一个可点 ImageView。结构锚定穿透隔层定位(父desc前缀 + 任意深度第0个可点ImageView)，
+            // 零坐标、抗布局漂移。
+            Rule(
+                text = null, viewId = null, pkg = "cn.wenyu.bodian",
+                activity = null, action = "click", name = "波点广告关闭X-结构",
+                className = "android.widget.ImageView",
+                parentDesc = "关闭",
+                childIndex = 0
             )
         )
         defaults.forEach { addRule(it) }

@@ -11,8 +11,8 @@ android {
         applicationId = "com.simely.adskip"
         minSdk = 24
         targetSdk = 35
-        versionCode = 43
-versionName = "1.0.43"
+        versionCode = 45
+        versionName = "1.0.45"
     }
 
     // 签名：仅当 CI 传入 KEYSTORE_FILE 属性时启用

@@ -212,8 +212,10 @@ class RuleMatcher(
     }
 
     /**
-     * 结构锚定：BFS 整棵树找满足 parentDesc 前缀(/parentClass) 的容器节点，取其 childIndex 子节点，
-     * 再做"可点 + 类名 + 祖先约束"校验。相比绝对坐标，这种结构关系不随横幅位置/尺寸漂移而失效。
+     * 结构锚定：BFS 整棵树找满足 parentDesc 前缀(/parentClass) 的容器节点，
+     * 再在其子树内搜索第 childIndex 个"可点 + 目标类名"的节点（任意深度），做"可点 + 类名 + 祖先约束"校验。
+     * 相比绝对坐标，这种结构关系不随横幅位置/尺寸漂移而失效；相比"仅直接子节点"，
+     * 它也能穿透中间隔层（如插屏广告的 X 常隔一层全屏遮罩 View）真正锁定到控件。
      */
     private fun findParentAnchored(root: AccessibilityNodeInfo, rule: Rule): List<AccessibilityNodeInfo> {
         val idx = rule.childIndex ?: return emptyList()
@@ -222,24 +224,18 @@ class RuleMatcher(
         var qi = 0
         while (qi < queue.size) {
             val node = queue[qi++]
-            try {
-                if (parentMatches(node, rule)) {
-                    val child = runCatching { node.getChild(idx) }.getOrNull()
-                    if (child != null) {
-                        if (anchoredChildMatches(child, rule)) out.add(child)
-                        else runCatching { child.recycle() }
-                    }
-                }
+            if (!runCatching { parentMatches(node, rule) }.getOrDefault(false)) {
                 val cnt = runCatching { node.childCount }.getOrDefault(0)
                 if (cnt in 1..64) {
-                    for (i in 0 until cnt) {
-                        val c = runCatching { node.getChild(i) }.getOrNull() ?: continue
-                        if (out.any { it == c }) continue // 已收入结果的引用由调用方管理
-                        queue.add(c)
-                    }
+                    for (i in 0 until cnt)
+                        runCatching { node.getChild(i) }.getOrNull()?.let { queue.add(it) }
                 }
                 runCatching { node.recycle() }
-            } catch (_: Exception) { runCatching { node.recycle() } }
+                continue
+            }
+            // 匹配父容器：在其子树内深搜第 idx 个目标（该函数自管回收，命中加入 out）
+            collectNthTarget(node, rule, idx, 0, out)
+            runCatching { node.recycle() }
         }
         return out
     }
@@ -256,13 +252,36 @@ class RuleMatcher(
         true
     }.getOrDefault(false)
 
-    /** 锚定到的子节点是否可采纳：可点 + 类名匹配 + 祖先约束 */
-    private fun anchoredChildMatches(child: AccessibilityNodeInfo, rule: Rule): Boolean = runCatching {
-        if (!child.isClickable()) return false
-        val cc = rule.className
-        if (!cc.isNullOrBlank() && child.className?.toString() != cc) return false
-        matchesAncestor(child, rule.ancestorViewId)
-    }.getOrDefault(false)
+    /** 在容器子树内深度优先收集第 targetIdx 个满足"可点 + className + 祖先约束"的节点，返回游标推进后的下一个序号。 */
+    private fun collectNthTarget(
+        node: AccessibilityNodeInfo, rule: Rule,
+        targetIdx: Int, start: Int, out: MutableList<AccessibilityNodeInfo>
+    ): Int {
+        var cur = start
+        try {
+            if (runCatching {
+                    node.isClickable() &&
+                        (rule.className.isNullOrBlank() || node.className?.toString() == rule.className) &&
+                        matchesAncestor(node, rule.ancestorViewId)
+                }.getOrDefault(false)) {
+                if (cur == targetIdx) {
+                    if (!out.any { it == node }) out.add(node)
+                    return cur + 1
+                }
+                cur++
+            }
+            val cnt = runCatching { node.childCount }.getOrDefault(0)
+            if (cnt in 1..64) {
+                for (i in 0 until cnt) {
+                    val child = runCatching { node.getChild(i) }.getOrNull() ?: continue
+                    val before = out.size
+                    cur = collectNthTarget(child, rule, targetIdx, cur, out)
+                    if (out.size == before) runCatching { child.recycle() }
+                }
+            }
+        } catch (_: Exception) {}
+        return cur
+    }
 
     fun isBlocked(pkg: String, text: String?, viewId: String?) =
         blockedRuleStore.isBlocked(pkg, text, viewId)
