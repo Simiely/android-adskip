@@ -120,25 +120,52 @@ class RuleMatcher(
                     sizeOk
                 }
                 .map { it.first }
-            return if (classConstraint == null) hits else hits.filter { matchesConstraint(it) }
+            val filtered = if (classConstraint == null) hits else hits.filter { matchesConstraint(it) }
+            return filtered.filter { matchesAncestor(it, rule.ancestorViewId) }
         }
 
         if (!rule.viewId.isNullOrEmpty()) {
             val byId = runCatching { root.findAccessibilityNodeInfosByViewId(rule.viewId) }
                 .getOrDefault(emptyList())
-            if (byId.isNotEmpty()) return byId.filter { matchesConstraint(it) }
+            if (byId.isNotEmpty()) return byId.filter { matchesConstraint(it) && matchesAncestor(it, rule.ancestorViewId) }
         }
         val results = mutableListOf<AccessibilityNodeInfo>()
         for (c in rule.textCandidates()) {
             runCatching { root.findAccessibilityNodeInfosByText(c) }
                 .getOrDefault(emptyList())
-                .filter { matchesConstraint(it) }
+                .filter { matchesConstraint(it) && matchesAncestor(it, rule.ancestorViewId) }
                 .let { results.addAll(it) }
             if (results.isNotEmpty()) break
         }
         if (results.isNotEmpty()) return results
         if (classConstraint != null) return AccessibilityUtil.findNodesByClass(root, classConstraint)
+            .filter { matchesAncestor(it, rule.ancestorViewId) }
         return emptyList()
+    }
+
+    /** 祖先约束：命中节点的某一层祖先(至多5层)持有指定 viewId 才采纳；null=不启用。 */
+    private fun matchesAncestor(node: AccessibilityNodeInfo, ancestorViewId: String?): Boolean {
+        if (ancestorViewId.isNullOrEmpty()) return true
+        var cur = runCatching { node.parent }.getOrNull() ?: return false
+        var depth = 0
+        while (depth < 5) {
+            try {
+                if (cur.viewIdResourceName == ancestorViewId) {
+                    runCatching { cur.recycle() }
+                    return true
+                }
+            } catch (_: Exception) {}
+            val next = runCatching { cur.parent }.getOrNull()
+            if (next == null || next == cur) {
+                runCatching { cur.recycle() }
+                return false
+            }
+            cur.recycle()
+            cur = next
+            depth++
+        }
+        runCatching { cur.recycle() }
+        return false
     }
 
     /** 收集屏幕坐标与目标矩形相交的可点击节点，并记录其面积（bounds 坐标匹配专用）。

@@ -17,6 +17,9 @@ data class Rule(
     val name: String?,
     val contentDescription: String? = null,
     val className: String? = null,
+    /** 祖先约束：命中节点的某一层祖先需持有该 viewId 才采纳（GKD 式"位于某容器内"的关系约束），
+     *  用于根治"同类控件冒充关闭按钮"的坐标误配。null=不启用该约束。 */
+    val ancestorViewId: String? = null,
     /**
      * 坐标固化匹配：屏幕上的绝对矩形 [left, top, right, bottom]。
      * 用于既无 viewId/text/描述、也无 className 可依的"纯位置按钮"（如波点开屏广告右上角X）。
@@ -45,6 +48,7 @@ data class Rule(
         put("name", name ?: JSONObject.NULL)
         put("cd", contentDescription ?: JSONObject.NULL)
         put("clz", className ?: JSONObject.NULL)
+        put("aVid", ancestorViewId ?: JSONObject.NULL)
         put("bounds", bounds?.let { JSONObject().apply { put("l", it[0]); put("t", it[1]); put("r", it[2]); put("b", it[3]) } } ?: JSONObject.NULL)
         put("hits", hits)
         put("approved", approved)
@@ -98,6 +102,7 @@ data class Rule(
         if (t.isNotEmpty()) score += 20 + t.length.coerceAtMost(30)
         if (c.isNotEmpty()) score += 20 + c.length.coerceAtMost(30)
         if (!className.isNullOrBlank()) score += 8
+        if (!ancestorViewId.isNullOrBlank()) score += 15 // 祖先容器约束是强的去歧义信号
         if (!bounds.isNullOrEmpty()) score += 60 // 显式坐标是强定位，仅次于 viewId
         return score
     }
@@ -117,6 +122,7 @@ data class Rule(
             name = if (o.isNull("name")) null else o.optString("name").takeIf { it.isNotEmpty() },
             contentDescription = if (o.isNull("cd")) null else o.optString("cd").takeIf { it.isNotEmpty() },
             className = if (o.isNull("clz")) null else o.optString("clz").takeIf { it.isNotEmpty() },
+            ancestorViewId = if (o.isNull("aVid")) null else o.optString("aVid").takeIf { it.isNotEmpty() },
             bounds = if (o.isNull("bounds")) null else {
                 val bo = o.getJSONObject("bounds")
                 listOf(bo.optInt("l"), bo.optInt("t"), bo.optInt("r"), bo.optInt("b"))
@@ -132,5 +138,5 @@ data class Rule(
 
     /** 去重用的指纹键（含 className 与 bounds，避免仅类名/坐标不同的规则被误删） */
     fun fingerprint(): String =
-        "${pkg}|${activity ?: ""}|${viewId ?: ""}|${text ?: ""}|${contentDescription ?: ""}|${className ?: ""}|${bounds ?: ""}"
+        "${pkg}|${activity ?: ""}|${viewId ?: ""}|${text ?: ""}|${contentDescription ?: ""}|${className ?: ""}|${ancestorViewId ?: ""}|${bounds ?: ""}"
 }

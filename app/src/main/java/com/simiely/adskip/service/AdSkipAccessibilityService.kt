@@ -107,7 +107,7 @@ class AdSkipAccessibilityService : AccessibilityService() {
             }
             // 兜底：部分 App 回到前台时不产生任何无障碍事件（如静态广告页从最近任务唤回）。
             // 用轻量轮询主动读取当前前台窗口，App 一变就扫一次，不再被动等事件。
-            if (!pollRunning) { pollRunning = true; startForegroundPoll() }
+            startForegroundPoll()
         } catch (e: Exception) {
             Logger.e("Failed to init", e)
         }
@@ -116,6 +116,8 @@ class AdSkipAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         val s = secure ?: return
         if (!s.getMasterEnabled()) return
+        // 总开关开启时轮询可能已被 P0 停止：一旦有事件流转，立即重新拉起，保证"回前台无事件"的兜底仍然生效
+        if (!pollRunning) startForegroundPoll()
         // 记录最近的 Activity（窗口切换事件 className 通常是 Activity 类名）
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             currentActivity = event.className?.toString()?.takeIf { it.isNotBlank() } ?: currentActivity
@@ -195,11 +197,11 @@ class AdSkipAccessibilityService : AccessibilityService() {
         }
     }
 
-    /** 前台轮询：App 回到前台不产生事件时，仍能主动发现并扫描 */
+    /** 前台轮询：App 回到前台不产生事件时，仍能主动发现并扫描。幂等：运行中直接调度下一拍。 */
     private fun startForegroundPoll() {
-        if (pollRunning) {
-            pollHandler.postDelayed({ pollTick() }, SCAN_POLL_MS)
-        }
+        if (pollRunning) return
+        pollRunning = true
+        pollHandler.postDelayed({ pollTick() }, SCAN_POLL_MS)
     }
 
     private fun pollTick() {
@@ -237,6 +239,9 @@ class AdSkipAccessibilityService : AccessibilityService() {
                 } else {
                     lastPollSeePkg = null
                 }
+            } else {
+                // 总开关关闭且无任何待执行规则可做：停止轮询空转。由 onAccessibilityEvent 在总开关再次开启时重新拉起。
+                stopForegroundPoll()
             }
         } catch (_: Exception) {
         }

@@ -12,7 +12,7 @@ android {
         minSdk = 24
         targetSdk = 35
         versionCode = 38
-        versionName = "1.0.37"
+        versionName = "1.0.38"
     }
 
     // 签名：仅当 CI 传入 KEYSTORE_FILE 属性时启用
