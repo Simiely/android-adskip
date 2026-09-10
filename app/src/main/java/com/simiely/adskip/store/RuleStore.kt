@@ -80,6 +80,27 @@ class RuleStore(context: Context) {
                 activity = null, action = "click", name = "不喜欢确认·不感兴趣"
             ),
 
+            // -------------- 网易云音乐 (com.netease.cloudmusic) --------------
+            // 底部「免费听时长已耗尽 · 2天畅听免费续」引导条右上角的关闭 X。
+            // 原生 viewId=closeIV 定位；closeIV 在网易云多处弹窗复用，但当前无障碍树中该引导条
+            // 根容器(bgContainer)未暴露(viewId 被系统合并丢失)，无法单纯用 bgContainer 做祖先约束；
+            // 实测裸 viewId 仅命中此处引导条唯一 closeIV，暂直接按 viewId 定位。若未来在其他弹窗
+            // 误触，再改结构锚定(该容器无 desc 故暂不适用)。
+            Rule(
+                text = null, viewId = "com.netease.cloudmusic:id/closeIV", pkg = "com.netease.cloudmusic",
+                activity = null, action = "click", name = "网易云底部引导关闭X"
+            ),
+            // 百度网盘 全屏开屏/插屏广告弹窗右上角的关闭X。FrameLayout(cl_root 全屏遮罩) 内 cl_content
+            // 是广告内容区，iv_close ImageView(click=true) 是关闭入口，viewId 唯一且稳定。
+            Rule(
+                text = null, viewId = "com.baidu.netdisk:id/iv_close", pkg = "com.baidu.netdisk",
+                activity = null, action = "click", name = "百度网盘弹窗广告关闭X"
+            ),
+            // ⚠️ 已停用：网易云首页顶部「滚动横幅广告」右上角的关闭角标。此前尝试用 tag_ad_banner("广告"标签)定位，
+            // 但实测点击该容器在部分素材下会【打开广告落地页/报名页】而非关闭——不同广告素材给同 id 容器绑定不同行为，
+            // 该锚点不可靠，已证明可能误触。adTagClose(X图标)本身 click=false 且与 tag_ad_banner 坐标重合，
+            // 点击点也落在同一处，无法用现有 viewId 闭环稳定关闭。待确认真正稳定的关闭手势(长按/菜单)后再恢复。
+
             // -------------- 波点音乐 (cn.wenyu.bodian) --------------
             // ⚠️ 已停用：此坐标(弹窗类关闭X [890,729,983,822])在歌单页会与"顺序播放/单曲循环"等真实控件坐标相交，
             // 无 Activity 作用域时在任意界面都可能误触(已造成 跳页/导入歌单/改播放顺序 三次误触)。
@@ -126,6 +147,17 @@ class RuleStore(context: Context) {
         // 仅删代码不会清除已持久化的种子，必须从设备本地库一并移除，改由结构锚定/通用角标规则接管。
         getRules()
             .filter { it.pkg == "cn.wenyu.bodian" && it.name in listOf("波点弹窗关闭X", "波点底部广告关闭", "波点广告关闭小X", "波点广告贴片关闭X") }
+            .forEach { removeRule(it.fingerprint()) }
+        // 网易云底部引导关闭X 的历史版本曾误加 ancestorViewId=bgContainer 祖先约束，但该容器在无障碍树中
+        // 并未暴露(viewId 被系统合并丢失)，导致自动扫描永远命中 0。仅删代码不清库会残留死规则占位，
+        // 需把旧版连同无效约束一并移除，由无约束(裸 viewId)的新版接管。
+        getRules()
+            .filter { it.pkg == "com.netease.cloudmusic" && it.name == "网易云底部引导关闭X" && it.ancestorViewId != null }
+            .forEach { removeRule(it.fingerprint()) }
+        // 网易云滚动横幅关闭角标(1.0.52 曾用 tag_ad_banner)已证实可能误触打开广告落地页/报名页，
+        // 从设备库摘除该历史种子，避免 Schema 保留的旧规则继续误触。
+        getRules()
+            .filter { it.pkg == "com.netease.cloudmusic" && it.name == "网易云滚动横幅广告关闭角标" }
             .forEach { removeRule(it.fingerprint()) }
     }
 
