@@ -36,7 +36,9 @@ class ClickExecutor(
     private val ruleMatcher: RuleMatcher,
     private val secure: SecurePrefs,
     private val screenW: Int,
-    private val screenH: Int
+    private val screenH: Int,
+    /** 当 performAction(ACTION_CLICK) 失败时，兜底手势坐标点击实现：参数是节点屏幕坐标，返回点击是否成功 */
+    private val coordinateClickFallback: ((Rect) -> Boolean)? = null
 ) {
     /** 点击成功后的 UI 反馈回调（由 Service 注入，避免 service 层直接依赖 float 层） */
     var onVisualFeedback: ((String) -> Unit)? = null
@@ -134,11 +136,22 @@ class ClickExecutor(
                 continue
             }
 
-            // 执行点击
+            // 执行点击。某些容器型"关闭按钮"（如向日葵横幅图下层 FrameLayout 关闭框）performAction(ACTION_CLICK)
+            // 回调失败但节点本身可被坐标点击触发 —— 此时降级为坐标手势兜底，否则"规则匹配正确却永远点不掉"。
             lastClick[key] = now
-            val success = clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-            Logger.d("[$pkg] 点击 ${if (success) "成功" else "失败"} text=$btnText vid=$clickable.viewIdResourceName")
-            ActionHistory.record("点击", "[$pkg] ${if (success) "成功" else "失败"} text=$btnText vid=$clickable.viewIdResourceName")
+            var success = clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            var usedFallback = false
+            if (!success && coordinateClickFallback != null) {
+                val cb = Rect()
+                runCatching { clickable.getBoundsInScreen(cb) }
+                if (cb.width() > 0 && cb.height() > 0) {
+                    usedFallback = coordinateClickFallback.invoke(cb)
+                    success = usedFallback
+                }
+            }
+            Logger.d("[$pkg] 点击 ${if (success) "成功" else "失败"}${if (usedFallback) "[坐标兜底]" else ""} text=$btnText vid=$clickable.viewIdResourceName")
+            ActionHistory.record("点击",
+                "[$pkg] ${if (success) "成功" else "失败"}${if (usedFallback) "[坐标兜底]" else ""} text=$btnText vid=$clickable.viewIdResourceName")
             if (success) sessionClickCount[key] = (st + 1) to now
 
             val vid = clickable.viewIdResourceName ?: ""

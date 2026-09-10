@@ -9,6 +9,7 @@ import android.os.Looper
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
+import android.accessibilityservice.GestureDescription
 import com.simely.adskip.AppState
 import com.simely.adskip.float.ClickHintOverlay
 import com.simely.adskip.service.capturer.CaptureManager
@@ -104,7 +105,7 @@ class AdSkipAccessibilityService : AccessibilityService() {
                 it.setRootProvider { rootInActiveWindow }
                 it.screenW = screenW; it.screenH = screenH
             }
-            clickExecutor = ClickExecutor(ruleMatcher!!, se, screenW, screenH).also {
+            clickExecutor = ClickExecutor(ruleMatcher!!, se, screenW, screenH, coordinateClickFallback = { bounds -> performCoordinateTap(bounds) }).also {
                 it.onVisualFeedback = { detail -> ClickHintOverlay.show(this, detail) }
             }
             // 兜底：部分 App 回到前台时不产生任何无障碍事件（如静态广告页从最近任务唤回）。
@@ -412,6 +413,18 @@ class AdSkipAccessibilityService : AccessibilityService() {
         lastPolledPkg = ""
         pendingStartTime = System.currentTimeMillis()
         Logger.d("[调试] 已清空本轮已执行规则($n)条，可重新盯守")
+    }
+
+    /** performAction(ACTION_CLICK) 失败时，坐标点击兜底：模拟触摸点击 bounds 中心 */
+    private fun performCoordinateTap(bounds: Rect): Boolean {
+        val cx = (bounds.left + bounds.right) / 2f
+        val cy = (bounds.top + bounds.bottom) / 2f
+        val path = android.graphics.Path().apply { moveTo(cx, cy) }
+        val gesture = GestureDescription.Builder()
+            .addStroke(GestureDescription.StrokeDescription(path, 0L, 30L))
+            .build()
+        Logger.d("[坐标点击] dispatchGesture bounds=$bounds center=($cx,$cy)")
+        return dispatchGesture(gesture, null, null)
     }
 
     fun debugDumpState() {
