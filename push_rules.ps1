@@ -14,8 +14,10 @@
 #   .\push_rules.ps1 hist                          dump recent action history
 #   .\push_rules.ps1 fired                         show session-fired rule set
 #   .\push_rules.ps1 firedReset                    clear session-fired set, re-arm tracking
+#   .\push_rules.ps1 probe -Rules '<ruleJson>'     dry-run ONE rule on current UI (no click); -Rules or -File
+#   .\push_rules.ps1 events                        dump action-event stream (incremental, new since last read)
 param(
-  [Parameter(Mandatory = $true)][ValidateSet("set", "clear", "clearPkg", "dump", "scan", "pause", "resume", "state", "tree", "trace", "hist", "fired", "firedReset")][string]$Mode,
+  [Parameter(Mandatory = $true)][ValidateSet("set", "clear", "clearPkg", "dump", "scan", "pause", "resume", "state", "tree", "trace", "hist", "fired", "firedReset", "probe", "events")][string]$Mode,
   [string]$File = "",
   [string]$Rules = "",
   [string]$Pkg = "",
@@ -78,10 +80,25 @@ switch ($Mode) {
   "firedReset" {
     & $adb shell am broadcast -a com.simely.adskip.action.RESET_FIRED
   }
+  "probe" {
+    if ($File) {
+      if (-not (Test-Path $File)) { Write-Host "file not found: $File"; exit 1 }
+      $json = (Get-Content $File -Raw -Encoding UTF8).Trim()
+    } else {
+      $json = $Rules
+    }
+    if (-not $json) { Write-Host "rule json empty; use -Rules or -File"; exit 1 }
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
+    $b64 = [Convert]::ToBase64String($bytes)
+    & $adb shell am broadcast -a com.simely.adskip.action.PROBE --es json $b64
+  }
+  "events" {
+    & $adb shell am broadcast -a com.simely.adskip.action.DUMP_EVENTS
+  }
 }
 
 # read back logcat for service-level commands (their output uses [dj] tag)
-if ($Mode -in "scan", "pause", "resume", "state", "tree", "dump", "trace", "hist", "fired", "firedReset") {
+if ($Mode -in "scan", "pause", "resume", "state", "tree", "dump", "trace", "hist", "fired", "firedReset", "probe", "events") {
   Start-Sleep -Milliseconds 900
   & $adb logcat -d -v brief | Select-String -Pattern "AdSkip" | Select-Object -Last 40 | ForEach-Object { $_.Line }
 }

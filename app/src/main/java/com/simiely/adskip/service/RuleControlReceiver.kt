@@ -47,7 +47,8 @@ class RuleControlReceiver : BroadcastReceiver() {
                 }
                 // ===== 以下为服务级调试命令：转发给当前运行的无障碍服务实例 =====
                 ACTION_SCAN, ACTION_PAUSE, ACTION_RESUME, ACTION_DUMP_STATE, ACTION_DUMP_TREE,
-                ACTION_TRACE, ACTION_DUMP_HISTORY, ACTION_DUMP_FIRED, ACTION_RESET_FIRED -> {
+                ACTION_TRACE, ACTION_DUMP_HISTORY, ACTION_DUMP_FIRED, ACTION_RESET_FIRED,
+                ACTION_PROBE, ACTION_DUMP_EVENTS -> {
                     val svc = AdSkipAccessibilityService.instance
                     if (svc == null) {
                         Logger.d("[规则控制] 服务未运行，无法执行 $action")
@@ -61,6 +62,11 @@ class RuleControlReceiver : BroadcastReceiver() {
                         ACTION_DUMP_HISTORY -> svc.debugDumpHistory()
                         ACTION_DUMP_FIRED -> svc.debugDumpFired()
                         ACTION_RESET_FIRED -> svc.debugResetFired()
+                        ACTION_PROBE -> {
+                            val b64 = intent.getStringExtra("json") ?: return
+                            svc.debugProbe(String(Base64.decode(b64, Base64.DEFAULT)))
+                        }
+                        ACTION_DUMP_EVENTS -> svc.debugDumpEvents()
                     }
                 }
             }
@@ -85,5 +91,8 @@ class RuleControlReceiver : BroadcastReceiver() {
         const val ACTION_DUMP_HISTORY = "com.simely.adskip.action.DUMP_HISTORY"
         const val ACTION_DUMP_FIRED = "com.simely.adskip.action.DUMP_FIRED"
         const val ACTION_RESET_FIRED = "com.simely.adskip.action.RESET_FIRED"
+        // 调试探针 / 增量事件流
+        const val ACTION_PROBE = "com.simely.adskip.action.PROBE"
+        const val ACTION_DUMP_EVENTS = "com.simely.adskip.action.DUMP_EVENTS"
     }
 }

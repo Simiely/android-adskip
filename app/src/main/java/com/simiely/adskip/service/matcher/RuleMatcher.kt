@@ -86,7 +86,8 @@ class RuleMatcher(
         return b.width() > 0 && b.height() > 0
     }
 
-    private fun findByRule(root: AccessibilityNodeInfo, rule: Rule): List<AccessibilityNodeInfo> {
+    /** 供调试探针(probe)单条规则干跑所用：返回匹配到的原始节点（不做可点击过滤）。 */
+    fun findByRule(root: AccessibilityNodeInfo, rule: Rule): List<AccessibilityNodeInfo> {
         // 组合约束：若规则同时声明了 viewId/text 与 className，则命中的节点必须同时满足，避免"同文案不同控件"误点。
         val classConstraint = rule.className?.takeIf { it.isNotBlank() }
 
@@ -98,7 +99,9 @@ class RuleMatcher(
                 runCatching { node.parent?.className?.toString() }.getOrNull() == classConstraint
         }
 
-        if (!rule.bounds.isNullOrEmpty()) {
+        // 坐标桥接仅用于"无任何语义标识"的纯位置按钮。一旦规则带 text/desc/viewId，
+        // 语义标识才是新布局下的精确锚点；过期的坐标矩形会因"见缝就收"扫到无关可点击控件（曾误触右下歌单按钮弹出歌曲菜单）。
+        if (!rule.bounds.isNullOrEmpty() && rule.viewId.isNullOrBlank() && rule.textCandidates().isEmpty()) {
             // 坐标固化匹配（无 viewId/text/className 依赖的纯位置按钮，如波点开屏广告X）：
             // 收集"屏幕坐标与规则矩形相交"的可点击节点，再选其中面积最小者（真正的按钮是最小那一个，
             // 避免规则矩形同时盖住左侧相邻大图时误点）。若规则带 className 则在其上再过滤。
@@ -138,8 +141,11 @@ class RuleMatcher(
             if (results.isNotEmpty()) break
         }
         if (results.isNotEmpty()) return results
-        if (classConstraint != null) return AccessibilityUtil.findNodesByClass(root, classConstraint)
-            .filter { matchesAncestor(it, rule.ancestorViewId) }
+        // 类名兜底仅适用于"纯类名规则"（无任何语义标识）。若规则带 text/desc/viewId，
+        // 语义匹配未命中时应返回空而非把整类控件全抓进来（那是误配来源）。
+        if (classConstraint != null && rule.viewId.isNullOrBlank() && rule.textCandidates().isEmpty())
+            return AccessibilityUtil.findNodesByClass(root, classConstraint)
+                .filter { matchesAncestor(it, rule.ancestorViewId) }
         return emptyList()
     }
 
@@ -180,8 +186,10 @@ class RuleMatcher(
         try {
             val r = Rect()
             node.getBoundsInScreen(r)
-            val intersects = r.intersect(target) || target.intersect(r)
-            if (node.isClickable && intersects && r.width() > 0 && r.height() > 0) {
+            // 用"节点中心是否落在目标矩形内"而非"矩形是否相交"作为命中判定：
+            // 相交判定会把只擦到一边的无关可点击控件抓进来（曾因坐标矩形边缘扫到右下歌单按钮而误触弹出歌曲菜单）。
+            val inBounds = r.centerX() in target.left..target.right && r.centerY() in target.top..target.bottom
+            if (node.isClickable && inBounds && r.width() > 0 && r.height() > 0) {
                 out.add(node to (r.width() * r.height()))
             }
             val childCount = node.childCount

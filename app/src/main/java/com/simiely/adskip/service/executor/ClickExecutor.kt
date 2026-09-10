@@ -21,6 +21,17 @@ import com.simely.adskip.util.SecurePrefs
  *   - 点击成功后记录统计
  *   - 定期清理冷却 Map 过期条目
  */
+
+/** 调试探针(probe)的干跑结论：block 非空则该节点不会真点（原因），resolved 仅在可点时才非空（需调用方 recycle）。 */
+data class ProbeVerdict(
+    val block: String?,
+    val resolved: AccessibilityNodeInfo?,
+    val text: String,
+    val cls: String,
+    val vid: String?,
+    val bounds: Rect
+)
+
 class ClickExecutor(
     private val ruleMatcher: RuleMatcher,
     private val secure: SecurePrefs,
@@ -160,6 +171,27 @@ class ClickExecutor(
 
         targets.forEach { it.recycle() }
         return null
+    }
+
+    /**
+     * 调试探针(probe)：单条规则干跑后对命中的任一个节点做"会不会真点"的判定，复用 tryClick 的私有闸门，
+     * 但不执行任何点击。返回的 [ProbeVerdict.resolved] 由调用方负责 recycle。
+     */
+    fun diagnose(node: AccessibilityNodeInfo, pkg: String): ProbeVerdict {
+        val clickable = AccessibilityUtil.resolveClickable(node)
+        val target = clickable ?: node
+        val r = Rect()
+        runCatching { target.getBoundsInScreen(r) }
+        val text = node.text?.toString() ?: ""
+        val cls = runCatching { target.className?.toString()?.substringAfterLast('.') }.getOrNull() ?: ""
+        val vid = runCatching { target.viewIdResourceName }.getOrNull()
+        val block = when {
+            clickable == null -> "无点击祖先"
+            isContainerLike(clickable) -> "容器被拦"
+            else -> null
+        }
+        if (block != null) runCatching { clickable?.recycle() }
+        return ProbeVerdict(block, if (block == null) clickable else null, text, cls, vid, r)
     }
 
     /** 判断节点是否"容器型"：屏幕覆盖率超过阈值（如全屏可点击祖先），非真正按钮 */

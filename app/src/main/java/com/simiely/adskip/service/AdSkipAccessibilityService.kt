@@ -61,6 +61,8 @@ class AdSkipAccessibilityService : AccessibilityService() {
     @Volatile
     private var debugPaused = false
     private var lastPollSeePkg: String? = null
+    /** events 增量读取指针：上次已读的动作历史条数 */
+    private var lastEventCount = 0
 
     override fun onCreate() {
         super.onCreate()
@@ -300,6 +302,8 @@ class AdSkipAccessibilityService : AccessibilityService() {
                 addAction(RuleControlReceiver.ACTION_DUMP_HISTORY)
                 addAction(RuleControlReceiver.ACTION_DUMP_FIRED)
                 addAction(RuleControlReceiver.ACTION_RESET_FIRED)
+                addAction(RuleControlReceiver.ACTION_PROBE)
+                addAction(RuleControlReceiver.ACTION_DUMP_EVENTS)
             }
             // 必须 EXPORTED：adb shell am broadcast 以 shell UID（≠ 应用 UID）发广播，
             // 非导出接收器会拦截其他 UID 的送达，导致调试接口不可用。个人调试接口可接受此暴露面。
@@ -332,6 +336,66 @@ class AdSkipAccessibilityService : AccessibilityService() {
         Logger.d("[调试] ---- 最近动作历史(共 ${list.size} 条，最新在最后) ----")
         list.forEach { Logger.d("[调试]   $it") }
         Logger.d("[调试] ---- 历史结束 ----")
+    }
+
+    /**
+     * 调试探针(probe)：把一条规则对当前界面"干跑"一遍——逐根节点求匹配、逐节点做可点判定，
+     * 报告命中 N 个、每个坐标/类别/是否会被容器或可点击性闸门拦下，但绝不执行点击。
+     * 用于新增/修改规则前预演"会不会误触"，把"反预演"前置到误触发生之前。
+     * @param ruleJson 单条规则的 JSON（RuleSet 可解析的数组或单个对象）
+     */
+    fun debugProbe(ruleJson: String) {
+        val rule = runCatching {
+            // 兼容三种输入：裸规则对象 / 规则数组 / 标准 RuleSet 对象(含 rules 键)，统一包成 RuleSet 结构再解析
+            val trimmed = ruleJson.trim()
+            val wrapper = when {
+                trimmed.startsWith("[") -> "{\"rules\":$trimmed}"
+                trimmed.startsWith("{") && !trimmed.contains("\"rules\"") -> "{\"rules\":[$trimmed]}"
+                else -> trimmed
+            }
+            com.simely.adskip.model.RuleSet.parse(wrapper).rules.firstOrNull()
+        }.getOrNull() ?: run { Logger.d("[probe] 规则解析失败: $ruleJson"); return }
+        val matcher = ruleMatcher ?: return
+        val exec = clickExecutor ?: return
+        Logger.d("[probe] 干跑规则 [${rule.pkg}|${rule.name}] ${rule.shortDescription()}")
+        Logger.d("[probe]   约束 text=${rule.text} desc=${rule.contentDescription} viewId=${rule.viewId} " +
+            "class=${rule.className} bounds=${rule.bounds} ancestorVid=${rule.ancestorViewId}")
+        val roots = mutableListOf<AccessibilityNodeInfo>()
+        var total = 0; var clickable = 0
+        try {
+            val actRoot = rootInActiveWindow
+            if (actRoot != null) roots.add(actRoot)
+            for (w in windows) { w.root?.let { roots.add(it) } }
+            for (root in roots) {
+                val pkg = root.packageName?.toString()
+                val hits = runCatching { matcher.findByRule(root, rule) }.getOrElse { emptyList() }
+                for (n in hits) {
+                    total++
+                    val v = exec.diagnose(n, pkg ?: rule.pkg)
+                    if (v.block == null) {
+                        clickable++
+                        Logger.d("[probe]   #$total 可点   [${v.bounds}] ${v.cls} text=${v.text} vid=${v.vid ?: "无"}")
+                        runCatching { v.resolved?.recycle() }
+                    } else {
+                        Logger.d("[probe]   #$total 会被拦(${v.block}) [${v.bounds}] ${v.cls} text=${v.text}")
+                    }
+                    runCatching { n.recycle() }
+                }
+            }
+            Logger.d("[probe] 规则[${rule.name}] 命中=$total 可点=$clickable 被拦=${total - clickable}")
+        } finally {
+            for (r in roots) runCatching { r.recycle() }
+        }
+    }
+
+    /** 增量读取动作事件流：仅打印自上次读取以来新增的条目（配合 seq），避免 hist 每次全量刷屏。 */
+    fun debugDumpEvents() {
+        val list = ActionHistory.dump()
+        val slice = list.drop(lastEventCount)
+        Logger.d("[events] ---- 自上次读取(seq=$lastEventCount)新增 ${slice.size} 条 ----")
+        slice.forEachIndexed { i, s -> Logger.d("[events]   #${lastEventCount + i} $s") }
+        lastEventCount = list.size
+        Logger.d("[events] 结束 当前总数=${list.size}")
     }
 
     fun debugDumpFired() {
