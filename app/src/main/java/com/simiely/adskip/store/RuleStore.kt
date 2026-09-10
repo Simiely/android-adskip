@@ -96,6 +96,12 @@ class RuleStore(context: Context) {
                 text = null, viewId = "com.baidu.netdisk:id/iv_close", pkg = "com.baidu.netdisk",
                 activity = null, action = "click", name = "百度网盘弹窗广告关闭X"
             ),
+            // 百度网盘首页右下角悬浮栏(fab_root_id)的关闭角标X。float_btn_close ImageView(click=true)，
+            // 点击收起悬浮栏。viewId 唯一且稳定。
+            Rule(
+                text = null, viewId = "com.baidu.netdisk:id/float_btn_close", pkg = "com.baidu.netdisk",
+                activity = null, action = "click", name = "百度网盘悬浮栏关闭X"
+            ),
             // ⚠️ 已停用：网易云首页顶部「滚动横幅广告」右上角的关闭角标。此前尝试用 tag_ad_banner("广告"标签)定位，
             // 但实测点击该容器在部分素材下会【打开广告落地页/报名页】而非关闭——不同广告素材给同 id 容器绑定不同行为，
             // 该锚点不可靠，已证明可能误触。adTagClose(X图标)本身 click=false 且与 tag_ad_banner 坐标重合，
