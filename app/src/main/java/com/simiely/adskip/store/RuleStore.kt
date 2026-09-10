@@ -107,6 +107,16 @@ class RuleStore(context: Context) {
                 className = "android.widget.ImageView",
                 parentDesc = "关闭",
                 childIndex = 0
+            ),
+            // 信息流贴片广告：主容器 content-desc 以"点击…金币"类文案开头(点击会跳广告页,危险不能误点)，
+            // 右下角"广告"角标 ImageView 是其子树内第一个可点 ImageView。结构锚定锁定角标而非根容器，
+            // 先避免旧规则 cd=广告 连父容器一起配到、误点跳广告页的问题。
+            Rule(
+                text = null, viewId = null, pkg = "cn.wenyu.bodian",
+                activity = null, action = "click", name = "波点广告贴片关闭X",
+                className = "android.widget.ImageView",
+                parentDesc = "点击广告赚288金币",
+                childIndex = 0
             )
         )
         defaults.forEach { addRule(it) }
