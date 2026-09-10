@@ -366,9 +366,12 @@ class AdSkipAccessibilityService : AccessibilityService() {
             val actRoot = rootInActiveWindow
             if (actRoot != null) roots.add(actRoot)
             for (w in windows) { w.root?.let { roots.add(it) } }
+            var scannedRoot = 0
             for (root in roots) {
                 val pkg = root.packageName?.toString()
                 val hits = runCatching { matcher.findByRule(root, rule) }.getOrElse { emptyList() }
+                Logger.d("[probe]   root#$scannedRoot pkg=$pkg hits=${hits.size}")
+                scannedRoot++
                 for (n in hits) {
                     total++
                     val v = exec.diagnose(n, pkg ?: rule.pkg)

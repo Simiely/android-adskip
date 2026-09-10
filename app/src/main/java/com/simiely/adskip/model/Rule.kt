@@ -21,6 +21,17 @@ data class Rule(
      *  用于根治"同类控件冒充关闭按钮"的坐标误配。null=不启用该约束。 */
     val ancestorViewId: String? = null,
     /**
+     * 结构锚定（相对定位，抗坐标漂移）：波点等 App 完全隐藏了 viewId，关闭按钮往往是
+     * "某个带 content-desc 的横幅容器下的第 N 个可点 ImageView"。相比绝对 pixel 坐标，
+     * 用"父容器描述前缀 + 子节点序号 + 类名"描述的结构关系更稳定——横幅移到哪、改多大都能锁定。
+     * parentDesc：父容器 contentDescription 需以前缀匹配；parentClass：父容器 className 可选收紧；
+     * childIndex：目标在父容器下的子节点序号（对应 AccessibilityNodeInfo.getChild(index)）。
+     * 任一非空即视为语义定位符，命中优先走结构锚定而非坐标。
+     */
+    val parentDesc: String? = null,
+    val parentClass: String? = null,
+    val childIndex: Int? = null,
+    /**
      * 坐标固化匹配：屏幕上的绝对矩形 [left, top, right, bottom]。
      * 用于既无 viewId/text/描述、也无 className 可依的"纯位置按钮"（如波点开屏广告右上角X）。
      * 非空时，匹配器只接收集合矩形内可点击节点；null 表示不启用坐标匹配。
@@ -49,6 +60,9 @@ data class Rule(
         put("cd", contentDescription ?: JSONObject.NULL)
         put("clz", className ?: JSONObject.NULL)
         put("aVid", ancestorViewId ?: JSONObject.NULL)
+        put("pDesc", parentDesc ?: JSONObject.NULL)
+        put("pClass", parentClass ?: JSONObject.NULL)
+        put("cIdx", childIndex ?: JSONObject.NULL)
         put("bounds", bounds?.let { JSONObject().apply { put("l", it[0]); put("t", it[1]); put("r", it[2]); put("b", it[3]) } } ?: JSONObject.NULL)
         put("hits", hits)
         put("approved", approved)
@@ -86,6 +100,7 @@ data class Rule(
     /** 判定为"危险范式"：无任何可定位信息（仅 className/空），匹配时会泛滥命中整类控件 */
     fun isDangerousPattern(): Boolean {
         if (!bounds.isNullOrEmpty()) return false // 有坐标定位就不算危险
+        if (!parentDesc.isNullOrBlank() || childIndex != null) return false // 结构锚定也是有效定位
         return contentDescription.isNullOrBlank() && text.isNullOrBlank() && viewId.isNullOrBlank()
     }
 
@@ -103,6 +118,9 @@ data class Rule(
         if (c.isNotEmpty()) score += 20 + c.length.coerceAtMost(30)
         if (!className.isNullOrBlank()) score += 8
         if (!ancestorViewId.isNullOrBlank()) score += 15 // 祖先容器约束是强的去歧义信号
+        if (!parentDesc.isNullOrBlank()) score += 30 // 结构锚定（父容器描述）是强定位
+        if (!parentClass.isNullOrBlank()) score += 10
+        if (childIndex != null) score += 15
         if (!bounds.isNullOrEmpty()) score += 60 // 显式坐标是强定位，仅次于 viewId
         return score
     }
@@ -123,6 +141,9 @@ data class Rule(
             contentDescription = if (o.isNull("cd")) null else o.optString("cd").takeIf { it.isNotEmpty() },
             className = if (o.isNull("clz")) null else o.optString("clz").takeIf { it.isNotEmpty() },
             ancestorViewId = if (o.isNull("aVid")) null else o.optString("aVid").takeIf { it.isNotEmpty() },
+            parentDesc = if (o.isNull("pDesc")) null else o.optString("pDesc").takeIf { it.isNotEmpty() },
+            parentClass = if (o.isNull("pClass")) null else o.optString("pClass").takeIf { it.isNotEmpty() },
+            childIndex = if (o.isNull("cIdx")) null else o.optInt("cIdx", -1).takeIf { it >= 0 },
             bounds = if (o.isNull("bounds")) null else {
                 val bo = o.getJSONObject("bounds")
                 listOf(bo.optInt("l"), bo.optInt("t"), bo.optInt("r"), bo.optInt("b"))
@@ -138,5 +159,5 @@ data class Rule(
 
     /** 去重用的指纹键（含 className 与 bounds，避免仅类名/坐标不同的规则被误删） */
     fun fingerprint(): String =
-        "${pkg}|${activity ?: ""}|${viewId ?: ""}|${text ?: ""}|${contentDescription ?: ""}|${className ?: ""}|${ancestorViewId ?: ""}|${bounds ?: ""}"
+        "${pkg}|${activity ?: ""}|${viewId ?: ""}|${text ?: ""}|${contentDescription ?: ""}|${className ?: ""}|${ancestorViewId ?: ""}|${parentDesc ?: ""}|${parentClass ?: ""}|${childIndex ?: -1}|${bounds ?: ""}"
 }

@@ -87,21 +87,24 @@ class RuleStore(context: Context) {
             // Rule(text=null, viewId=null, pkg="cn.wenyu.bodian", activity=null, action="click",
             //      name="波点弹窗关闭X", className="android.widget.ImageView", bounds=listOf(890,729,983,822))
 
-            // 主页底部广告横幅（"点击广告赚288金币"红果短剧）右上角关闭控制：content-desc="广告" 的可点击 ImageView。
-            // 真机 adb 实测点击该角标广告横幅消失。位置会随广告变体微移，用 contentDescription + 尺寸/小节点约束兜底。
+            // 波点完全隐藏 viewId，横幅右上角关闭"×"是"content-desc 前缀为'23'(会员领取横幅) 的容器下第0个子节点 ImageView"。
+            // 用结构锚定(父容器描述前缀 + 子节点序号 + 类名)定位而非绝对坐标——横幅移到哪/改多大都准确命中，
+            // 且不擦边点到无关控件，天然抗坐标漂移。
             Rule(
                 text = null, viewId = null, pkg = "cn.wenyu.bodian",
-                activity = null, action = "click", name = "波点底部广告关闭",
+                activity = null, action = "click", name = "波点横幅关闭小X",
                 className = "android.widget.ImageView",
-                contentDescription = "广告",
-                bounds = listOf(915, 1956, 1024, 2003)
+                parentDesc = "23",
+                parentClass = "android.view.View",
+                childIndex = 0
             )
         )
         defaults.forEach { addRule(it) }
         // 退役的内置规则清理：历史版本曾把"波点弹窗关闭X"坐标规则播种进本地库，它在歌单页会误触
-        // "顺序播放/单曲循环"等真实控件。仅删代码不会清除已持久化的种子，必须从设备本地库一并移除。
+        // "顺序播放/单曲循环"等真实控件；"波点底部广告关闭"、旧坐标版"波点广告关闭小X"会因过期坐标矩形误点。
+        // 仅删代码不会清除已持久化的种子，必须从设备本地库一并移除，改由结构锚定规则接管。
         getRules()
-            .filter { it.pkg == "cn.wenyu.bodian" && it.name in listOf("波点弹窗关闭X") }
+            .filter { it.pkg == "cn.wenyu.bodian" && it.name in listOf("波点弹窗关闭X", "波点底部广告关闭", "波点广告关闭小X") }
             .forEach { removeRule(it.fingerprint()) }
     }
 

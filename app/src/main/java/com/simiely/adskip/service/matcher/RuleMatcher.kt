@@ -88,8 +88,16 @@ class RuleMatcher(
 
     /** 供调试探针(probe)单条规则干跑所用：返回匹配到的原始节点（不做可点击过滤）。 */
     fun findByRule(root: AccessibilityNodeInfo, rule: Rule): List<AccessibilityNodeInfo> {
+        // 结构锚定优先：按"父容器描述前缀 + 子节点序号 + 类名"定位，抗坐标漂移。
+        // 波点隐藏 viewId，关闭按钮常为"带 desc 的横幅容器下第 N 个可点 ImageView"，比绝对坐标稳。
+        if (!rule.parentDesc.isNullOrBlank() || rule.childIndex != null)
+            return findParentAnchored(root, rule)
         // 组合约束：若规则同时声明了 viewId/text 与 className，则命中的节点必须同时满足，避免"同文案不同控件"误点。
         val classConstraint = rule.className?.takeIf { it.isNotBlank() }
+        // 语义定位符：viewId/text/desc（name 只是标签不是定位符，不能因规则命名了就从坐标/类名分支退出）。
+        // 坐标桥接与类名兜底仅服务于"无任何语义定位符"的纯位置/纯类名规则。
+        val hasLocator = !rule.viewId.isNullOrBlank() || !rule.text.isNullOrBlank() ||
+            !rule.contentDescription.isNullOrBlank()
 
         fun matchesConstraint(node: AccessibilityNodeInfo): Boolean {
             if (classConstraint == null) return true
@@ -101,7 +109,7 @@ class RuleMatcher(
 
         // 坐标桥接仅用于"无任何语义标识"的纯位置按钮。一旦规则带 text/desc/viewId，
         // 语义标识才是新布局下的精确锚点；过期的坐标矩形会因"见缝就收"扫到无关可点击控件（曾误触右下歌单按钮弹出歌曲菜单）。
-        if (!rule.bounds.isNullOrEmpty() && rule.viewId.isNullOrBlank() && rule.textCandidates().isEmpty()) {
+        if (!rule.bounds.isNullOrEmpty() && !hasLocator) {
             // 坐标固化匹配（无 viewId/text/className 依赖的纯位置按钮，如波点开屏广告X）：
             // 收集"屏幕坐标与规则矩形相交"的可点击节点，再选其中面积最小者（真正的按钮是最小那一个，
             // 避免规则矩形同时盖住左侧相邻大图时误点）。若规则带 className 则在其上再过滤。
@@ -141,9 +149,9 @@ class RuleMatcher(
             if (results.isNotEmpty()) break
         }
         if (results.isNotEmpty()) return results
-        // 类名兜底仅适用于"纯类名规则"（无任何语义标识）。若规则带 text/desc/viewId，
+        // 类名兜底仅适用于"纯类名规则"（无任何语义定位符）。若规则带 text/desc/viewId，
         // 语义匹配未命中时应返回空而非把整类控件全抓进来（那是误配来源）。
-        if (classConstraint != null && rule.viewId.isNullOrBlank() && rule.textCandidates().isEmpty())
+        if (classConstraint != null && !hasLocator)
             return AccessibilityUtil.findNodesByClass(root, classConstraint)
                 .filter { matchesAncestor(it, rule.ancestorViewId) }
         return emptyList()
@@ -202,6 +210,59 @@ class RuleMatcher(
             }
         } catch (_: Exception) {}
     }
+
+    /**
+     * 结构锚定：BFS 整棵树找满足 parentDesc 前缀(/parentClass) 的容器节点，取其 childIndex 子节点，
+     * 再做"可点 + 类名 + 祖先约束"校验。相比绝对坐标，这种结构关系不随横幅位置/尺寸漂移而失效。
+     */
+    private fun findParentAnchored(root: AccessibilityNodeInfo, rule: Rule): List<AccessibilityNodeInfo> {
+        val idx = rule.childIndex ?: return emptyList()
+        val out = mutableListOf<AccessibilityNodeInfo>()
+        val queue = ArrayList<AccessibilityNodeInfo>().apply { add(root) }
+        var qi = 0
+        while (qi < queue.size) {
+            val node = queue[qi++]
+            try {
+                if (parentMatches(node, rule)) {
+                    val child = runCatching { node.getChild(idx) }.getOrNull()
+                    if (child != null) {
+                        if (anchoredChildMatches(child, rule)) out.add(child)
+                        else runCatching { child.recycle() }
+                    }
+                }
+                val cnt = runCatching { node.childCount }.getOrDefault(0)
+                if (cnt in 1..64) {
+                    for (i in 0 until cnt) {
+                        val c = runCatching { node.getChild(i) }.getOrNull() ?: continue
+                        if (out.any { it == c }) continue // 已收入结果的引用由调用方管理
+                        queue.add(c)
+                    }
+                }
+                runCatching { node.recycle() }
+            } catch (_: Exception) { runCatching { node.recycle() } }
+        }
+        return out
+    }
+
+    /** 容器节点是否满足结构锚定的父条件（desc 前缀 + 可选 className） */
+    private fun parentMatches(node: AccessibilityNodeInfo, rule: Rule): Boolean = runCatching {
+        val pd = rule.parentDesc
+        if (!pd.isNullOrBlank()) {
+            val desc = node.contentDescription?.toString() ?: return false
+            if (!desc.startsWith(pd)) return false
+        }
+        val pc = rule.parentClass
+        if (!pc.isNullOrBlank() && node.className?.toString() != pc) return false
+        true
+    }.getOrDefault(false)
+
+    /** 锚定到的子节点是否可采纳：可点 + 类名匹配 + 祖先约束 */
+    private fun anchoredChildMatches(child: AccessibilityNodeInfo, rule: Rule): Boolean = runCatching {
+        if (!child.isClickable()) return false
+        val cc = rule.className
+        if (!cc.isNullOrBlank() && child.className?.toString() != cc) return false
+        matchesAncestor(child, rule.ancestorViewId)
+    }.getOrDefault(false)
 
     fun isBlocked(pkg: String, text: String?, viewId: String?) =
         blockedRuleStore.isBlocked(pkg, text, viewId)
