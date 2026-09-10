@@ -108,23 +108,24 @@ class RuleStore(context: Context) {
                 parentDesc = "关闭",
                 childIndex = 0
             ),
-            // 信息流贴片广告：主容器 content-desc 以"点击…金币"类文案开头(点击会跳广告页,危险不能误点)，
-            // 右下角"广告"角标 ImageView 是其子树内第一个可点 ImageView。结构锚定锁定角标而非根容器，
-            // 先避免旧规则 cd=广告 连父容器一起配到、误点跳广告页的问题。
+            // 信息流贴片广告角标：贴片变体(金币/红果短剧/游戏)文案各不相同，且父容器 desc 并不都含"广告"，
+            // 唯一跨所有变体不变的稳定共性=右下角 content-desc 精确为"广告"的可点 ImageView。
+            // 改以 desc==广告 + className=ImageView 交叉锁定：父容器是 View 会被 className 过滤，绝不误配跳广告页的根容器。
+            // (替代旧的 pDesc=点击广告赚288金币 文案前缀锚定——文案一变就失效且可能在别处误触，已退役清理)
             Rule(
                 text = null, viewId = null, pkg = "cn.wenyu.bodian",
-                activity = null, action = "click", name = "波点广告贴片关闭X",
+                activity = null, action = "click", name = "波点广告角标关闭",
                 className = "android.widget.ImageView",
-                parentDesc = "点击广告赚288金币",
-                childIndex = 0
+                contentDescription = "广告"
             )
         )
         defaults.forEach { addRule(it) }
         // 退役的内置规则清理：历史版本曾把"波点弹窗关闭X"坐标规则播种进本地库，它在歌单页会误触
-        // "顺序播放/单曲循环"等真实控件；"波点底部广告关闭"、旧坐标版"波点广告关闭小X"会因过期坐标矩形误点。
-        // 仅删代码不会清除已持久化的种子，必须从设备本地库一并移除，改由结构锚定规则接管。
+        // "顺序播放/单曲循环"等真实控件；"波点底部广告关闭"、旧坐标版"波点广告关闭小X"、文案前缀锚定的
+        // "波点广告贴片关闭X" 分别因过期坐标矩形或过时文案(pDesc=点击广告赚288金币)失效/可能误触。
+        // 仅删代码不会清除已持久化的种子，必须从设备本地库一并移除，改由结构锚定/通用角标规则接管。
         getRules()
-            .filter { it.pkg == "cn.wenyu.bodian" && it.name in listOf("波点弹窗关闭X", "波点底部广告关闭", "波点广告关闭小X") }
+            .filter { it.pkg == "cn.wenyu.bodian" && it.name in listOf("波点弹窗关闭X", "波点底部广告关闭", "波点广告关闭小X", "波点广告贴片关闭X") }
             .forEach { removeRule(it.fingerprint()) }
     }
 

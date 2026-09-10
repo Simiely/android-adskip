@@ -240,12 +240,17 @@ class RuleMatcher(
         return out
     }
 
-    /** 容器节点是否满足结构锚定的父条件（desc 前缀 + 可选 className） */
+    /** 容器节点是否满足结构锚定的父条件（desc 按 parentMatch 匹配 + 可选 className） */
     private fun parentMatches(node: AccessibilityNodeInfo, rule: Rule): Boolean = runCatching {
         val pd = rule.parentDesc
         if (!pd.isNullOrBlank()) {
             val desc = node.contentDescription?.toString() ?: return false
-            if (!desc.startsWith(pd)) return false
+            val matched = when (rule.parentMatch) {
+                1 -> desc.contains(pd)
+                2 -> desc == pd
+                else -> desc.startsWith(pd)
+            }
+            if (!matched) return false
         }
         val pc = rule.parentClass
         if (!pc.isNullOrBlank() && node.className?.toString() != pc) return false

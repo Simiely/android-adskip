@@ -32,6 +32,11 @@ data class Rule(
     val parentClass: String? = null,
     val childIndex: Int? = null,
     /**
+     * 父容器 content-desc 匹配方式: 0=前缀 startsWith(默认), 1=包含 contains, 2=精确 equals
+     * 广告贴片文案常变但永远含"广告"关键词，用 1=包含就能适配所有类似布局的贴片，不用每条变文案改规则。
+     */
+    val parentMatch: Int? = null, // 0|1|2 → startsWith|contains|equals
+    /**
      * 坐标固化匹配：屏幕上的绝对矩形 [left, top, right, bottom]。
      * 用于既无 viewId/text/描述、也无 className 可依的"纯位置按钮"（如波点开屏广告右上角X）。
      * 非空时，匹配器只接收集合矩形内可点击节点；null 表示不启用坐标匹配。
@@ -63,6 +68,7 @@ data class Rule(
         put("pDesc", parentDesc ?: JSONObject.NULL)
         put("pClass", parentClass ?: JSONObject.NULL)
         put("cIdx", childIndex ?: JSONObject.NULL)
+        put("pM", parentMatch ?: JSONObject.NULL)
         put("bounds", bounds?.let { JSONObject().apply { put("l", it[0]); put("t", it[1]); put("r", it[2]); put("b", it[3]) } } ?: JSONObject.NULL)
         put("hits", hits)
         put("approved", approved)
@@ -144,6 +150,7 @@ data class Rule(
             parentDesc = if (o.isNull("pDesc")) null else o.optString("pDesc").takeIf { it.isNotEmpty() },
             parentClass = if (o.isNull("pClass")) null else o.optString("pClass").takeIf { it.isNotEmpty() },
             childIndex = if (o.isNull("cIdx")) null else o.optInt("cIdx", -1).takeIf { it >= 0 },
+            parentMatch = if (o.isNull("pM")) null else o.optInt("pM", 0).takeIf { it in 0..2 },
             bounds = if (o.isNull("bounds")) null else {
                 val bo = o.getJSONObject("bounds")
                 listOf(bo.optInt("l"), bo.optInt("t"), bo.optInt("r"), bo.optInt("b"))
@@ -159,5 +166,5 @@ data class Rule(
 
     /** 去重用的指纹键（含 className 与 bounds，避免仅类名/坐标不同的规则被误删） */
     fun fingerprint(): String =
-        "${pkg}|${activity ?: ""}|${viewId ?: ""}|${text ?: ""}|${contentDescription ?: ""}|${className ?: ""}|${ancestorViewId ?: ""}|${parentDesc ?: ""}|${parentClass ?: ""}|${childIndex ?: -1}|${bounds ?: ""}"
+        "${pkg}|${activity ?: ""}|${viewId ?: ""}|${text ?: ""}|${contentDescription ?: ""}|${className ?: ""}|${ancestorViewId ?: ""}|${parentDesc ?: ""}|${parentClass ?: ""}|${childIndex ?: -1}|${parentMatch ?: -1}|${bounds ?: ""}"
 }
