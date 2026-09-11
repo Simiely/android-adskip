@@ -195,6 +195,29 @@ class AdSkipAccessibilityService : AccessibilityService() {
                 audit.candidate?.let { lifecycle?.markFired(it.fingerprint()); lifecycle?.scheduleVerification(it, activity) } // 标记该规则"已执行"并安排结果验证
                 ActionHistory.record("命中", "[$pkg] ${audit.candidate?.shortDescription() ?: audit.logText}")
             }
+            // 相对横幅偏移规则（关闭 ✕ 绘制在纯图片横幅内、非独立节点）：锚定横幅容器后用其右上角偏移坐标手势点击，
+            // 绝不用节点中心（防跳转误触）。与节点点击路径隔离，先跑节点、再跑偏移，二者互斥。
+            if (audit?.logText != "blocked") {
+                for (root in roots) {
+                    runCatching { matcher.findRelativeTaps(root, pkg, screenW, screenH, activity) }
+                        .getOrDefault(emptyList())
+                        .forEach { tap ->
+                            val r = tap.rule
+                            val key = "$pkg|${tap.bannerBounds.left},${tap.bannerBounds.top},${tap.bannerBounds.right},${tap.bannerBounds.bottom}|${r?.fingerprint() ?: "off"}"
+                            if (key == lastActionKey && now - lastActionTime < ACTION_GAP_MS) {
+                                Logger.d("[$pkg] 横幅偏移冷却中，跳过 tap(${tap.tapX},${tap.tapY})")
+                                return@forEach
+                            }
+                            val ok = performCoordinateTap(Rect(tap.tapX, tap.tapY, tap.tapX + 1, tap.tapY + 1))
+                            Logger.d("[$pkg] 相对横幅点击 ${r?.name ?: "?"} tap(${tap.tapX},${tap.tapY}) ${if (ok) "成功" else "失败"}")
+                            ActionHistory.record(if (ok) "点击" else "失败",
+                                "[$pkg] 相对横幅 [${r?.name ?: "?"}] tap(${tap.tapX},${tap.tapY}) bounds=${tap.bannerBounds}")
+                            lastActionKey = key
+                            lastActionTime = now
+                            runCatching { tap.node?.recycle() }
+                        }
+                }
+            }
         } finally {
             for (r in roots) { try { r.recycle() } catch (_: Exception) {} }
         }

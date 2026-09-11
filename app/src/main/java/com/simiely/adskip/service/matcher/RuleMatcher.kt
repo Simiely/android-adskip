@@ -19,6 +19,77 @@ class RuleMatcher(
     private val ruleStore: RuleStore,
     private val blockedRuleStore: BlockedRuleStore
 ) {
+    /**
+     * 相对横幅偏移的命中结果：锚定到的横幅容器屏幕 bounds + 计算出的手势点击屏幕坐标。
+     * @param bannerBounds 命中横幅容器的屏幕矩形（用于日志/兜底）
+     * @param tapX/tapY 待点击的屏幕坐标（横幅右上角内缩 offRight/offTop）
+     * @param rule 命中规则（供日志/入库）
+     */
+    class RelativeTap(val bannerBounds: Rect, val tapX: Int, val tapY: Int, val rule: Rule?, val node: AccessibilityNodeInfo?)
+
+    /**
+     * 相对横幅偏移匹配：定位所有声明了 offRight/offTop 的活动中规则对应的"全宽横幅容器"，
+     * 计算其右上角内缩点作为手势点击坐标。因为 ✕ 绘制在 React Native 纯图片横幅内、不作为无障碍节点暴露，
+     * 所以这里锚定**横幅容器本身**（有稳定的结构特征），再按相对偏移产出点击点，绝不用节点中心（防跳转误触）。
+     * 与 findTargets 独立：这类规则不会以节点形式参与 tryClick。
+     */
+    fun findRelativeTaps(
+        root: AccessibilityNodeInfo, pkg: String,
+        screenW: Int, screenH: Int, activity: String?
+    ): List<RelativeTap> {
+        val rules = ruleStore.allRules().filter {
+            it.pkg == pkg && !it.disabled && it.offRight != null && it.offTop != null &&
+                (it.activity.isNullOrEmpty() || it.activity == activity || activity.isNullOrEmpty())
+        }
+        if (rules.isEmpty()) return emptyList()
+        val fullW = if (screenW > 0) screenW else 1080
+        val fullH = if (screenH > 0) screenH else 2400
+        val out = mutableListOf<RelativeTap>()
+        val seen = HashSet<String>()
+        // BFS 全树：锚定"全宽 + 横幅高度"的容器（默认 android.view.View；规则可收紧 className）
+        val queue = ArrayList<AccessibilityNodeInfo>().apply { add(root) }
+        var qi = 0
+        while (qi < queue.size) {
+            val node = queue[qi++]
+            val b = Rect()
+            runCatching { node.getBoundsInScreen(b) }
+            val isWide = b.width() >= (fullW * 0.9).toInt()
+            val isBannerH = b.height() >= BANNER_MIN_H && b.height() <= (fullH * 0.45).toInt()
+            val cls = runCatching { node.className?.toString() }.getOrNull()
+            val matches = if (rules.size == 1 && rules[0].className.isNullOrBlank()) {
+                // 单规则且未声明 className：用"全宽 + 横幅高"结构特征
+                isWide && isBannerH
+            } else {
+                // 有 className 约束：按每规则匹配其 className，再叠加全宽/横幅高
+                rules.any { r ->
+                    val rc = r.className
+                    (rc.isNullOrBlank() || cls == rc) && isWide && isBannerH
+                }
+            }
+            if (matches) {
+                for (r in rules) {
+                    val rc = r.className
+                    if (!rc.isNullOrBlank() && cls != rc) continue
+                    val tapX = b.right - (r.offRight ?: 0)
+                    val tapY = b.top + (r.offTop ?: 0)
+                    val key = "${b.left},${b.top},${b.right},${b.bottom}|$tapX,$tapY|${r.fingerprint()}"
+                    if (seen.add(key)) {
+                        Logger.d("  [relativeTap] 横幅[${r.name}] bounds=$b → tap($tapX,$tapY) 距右=${r.offRight} 距上=${r.offTop}")
+                        out.add(RelativeTap(Rect(b), tapX, tapY, r, node))
+                    }
+                }
+            }
+            val cnt = runCatching { node.childCount }.getOrDefault(0)
+            if (cnt in 1..64) {
+                for (i in 0 until cnt) {
+                    runCatching { node.getChild(i) }.getOrNull()?.let { queue.add(it) }
+                }
+            }
+            runCatching { node.recycle() }
+        }
+        return out
+    }
+
     fun findTargets(
         root: AccessibilityNodeInfo, pkg: String,
         keywordEnabled: Boolean,
@@ -33,6 +104,9 @@ class RuleMatcher(
         val activeRules = ruleStore.allRules()
             .filter { r ->
                 if (r.pkg != pkg || r.disabled) return@filter false
+                // 相对横幅偏移规则不在此返回节点（banner 容器被当普通节点点击会跳到购买页），
+                // 由 findRelativeTaps 独立锚定并产出偏移坐标，这里是纯覆盖隔离，避免两路同时命中重复操作。
+                if (r.offRight != null && r.offTop != null) return@filter false
                 // 危险范式（仅有 className、无任何定位信息）永不参与点击：会泛滥命中整类控件（如所有 ImageView），
                 // 且不区分已转正/候选。真正的坐标/文字/viewId 规则不受影响。
                 if (r.isDangerousPattern()) return@filter false
@@ -260,10 +334,28 @@ class RuleMatcher(
     private fun findParentAnchored(root: AccessibilityNodeInfo, rule: Rule): List<AccessibilityNodeInfo> {
         val idx = rule.childIndex ?: return emptyList()
         val out = mutableListOf<AccessibilityNodeInfo>()
+        // parentAnyDesc 语义下，父容器必须接近全屏(用于识别"歌播放页根/大容器")，过滤掉私人推荐/歌手名等小容器
+        val fullScreen = Rect()
+        runCatching { root.getBoundsInScreen(fullScreen) }
         val queue = ArrayList<AccessibilityNodeInfo>().apply { add(root) }
         var qi = 0
         while (qi < queue.size) {
             val node = queue[qi++]
+            // 接近全屏判定(仅对 parentAnyDesc 生效)：宽 ≥ 屏宽且高 ≥ 屏高 90%，避免小容器子树误配
+            val nearFull = if (rule.parentAnyDesc == true) {
+                val rr = Rect()
+                runCatching { node.getBoundsInScreen(rr) }
+                fullScreen.width() > 0 && rr.width() >= fullScreen.width() && rr.height() >= fullScreen.height() * 9 / 10
+            } else true
+            if (!nearFull) {
+                val cnt = runCatching { node.childCount }.getOrDefault(0)
+                if (cnt in 1..64) {
+                    for (i in 0 until cnt)
+                        runCatching { node.getChild(i) }.getOrNull()?.let { queue.add(it) }
+                }
+                runCatching { node.recycle() }
+                continue
+            }
             if (!runCatching { parentMatches(node, rule) }.getOrDefault(false)) {
                 val cnt = runCatching { node.childCount }.getOrDefault(0)
                 if (cnt in 1..64) {
@@ -280,17 +372,22 @@ class RuleMatcher(
         return out
     }
 
-    /** 容器节点是否满足结构锚定的父条件（desc 按 parentMatch 匹配 + 可选 className） */
+    /** 容器节点是否满足结构锚定的父条件（desc 按 parentMatch 匹配 + parentAnyDesc + 可选 className） */
     private fun parentMatches(node: AccessibilityNodeInfo, rule: Rule): Boolean = runCatching {
         val pd = rule.parentDesc
         if (!pd.isNullOrBlank()) {
-            val desc = node.contentDescription?.toString() ?: return false
+            val desc = node.contentDescription?.toString()
             val matched = when (rule.parentMatch) {
-                1 -> desc.contains(pd)
+                1 -> desc?.contains(pd) == true
                 2 -> desc == pd
-                else -> desc.startsWith(pd)
+                else -> desc?.startsWith(pd) == true
             }
             if (!matched) return false
+        } else if (rule.parentAnyDesc == true) {
+            // 父容器不限定具体 desc 内容，只要有非空 contentDescription 即视为命中。
+            // 用于"宿主根容器 desc=动态歌名/标题"这类内容随场景变化但始终有值的父容器。
+            val desc = node.contentDescription?.toString().orEmpty()
+            if (desc.isBlank()) return false
         }
         val pc = rule.parentClass
         if (!pc.isNullOrBlank() && node.className?.toString() != pc) return false
@@ -340,5 +437,7 @@ class RuleMatcher(
         /** 真正的关闭/跳过按钮都是小控件，超过此尺寸（px）的候选一律排除（避免横幅/大卡片误配坐标）。
          *  当前你的手机屏宽 1080px，440px 约占屏宽 2/5，关闭按钮很少超过这个尺寸。*/
         private const val MAX_CLOSE_DIMEN = 440
+        /** 相对横幅偏移锚定的横幅容器最小高度（px）：过矮的节点不是运营横幅 */
+        private const val BANNER_MIN_H = 120
     }
 }

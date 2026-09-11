@@ -37,11 +37,29 @@ data class Rule(
      */
     val parentMatch: Int? = null, // 0|1|2 → startsWith|contains|equals
     /**
+     * 父容器"任意非空 content-desc"匹配：true 时父容器只要能解析出任何非空 contentDescription 即通过，
+     * 不限制具体内容。用于锚定"宿主根容器 desc= 动态歌名/标题"这类内容随场景变化的父容器（如波点歌播放页根，
+     * desc 是该歌的歌名，换歌即变，但"根容器有非空 desc"这一事实恒定）。需配合 parentClass 收紧到目标容器类。
+     */
+    val parentAnyDesc: Boolean? = null,
+    /**
      * 坐标固化匹配：屏幕上的绝对矩形 [left, top, right, bottom]。
      * 用于既无 viewId/text/描述、也无 className 可依的"纯位置按钮"（如波点开屏广告右上角X）。
      * 非空时，匹配器只接收集合矩形内可点击节点；null 表示不启用坐标匹配。
      */
     val bounds: List<Int>? = null,
+    /**
+     * 相对横幅偏移（锚定横幅容器后按偏移点坐标点击，绝不用节点中心）：
+     * 某些运营横幅(如波点"会员特惠限时1元")是 React Native 纯图片，关闭 ✕ 绘制在图片内、不作为独立
+     * 无障碍节点暴露(viewId/text/desc 全无)，无法用节点定位。但横幅容器本身有稳定结构特征
+     * (className=android.view.View + 宽度接近全屏 + 高度适中)。规则声明 offRight/offTop 时，
+     * 匹配器定位到该横幅容器，取其屏幕 bounds，计算手势点击点 = (container.right - offRight, container.top + offTop)，
+     * 即"横幅右上角内缩固定像素"。因为锚点在横幅框、不写死绝对坐标，横幅移到任何位置都能命中外侧 ✕；
+     * 且只点偏移坐标而非节点中心，规避"点中心会跳转到会员购买页"的误触。
+     * 两者都非空才启用；任何一个为 null 则不触发偏移点击。
+     */
+    val offRight: Int? = null,
+    val offTop: Int? = null,
     /** 已被可信路径成功点击的次数（自动捕获的确认证据） */
     val hits: Int = 0,
     /** true=转正可直接自动点击；false=候选，仅可信路径再次命中时才累计 hits 并升级 */
@@ -69,7 +87,10 @@ data class Rule(
         put("pClass", parentClass ?: JSONObject.NULL)
         put("cIdx", childIndex ?: JSONObject.NULL)
         put("pM", parentMatch ?: JSONObject.NULL)
+        put("pAnyDesc", parentAnyDesc ?: JSONObject.NULL)
         put("bounds", bounds?.let { JSONObject().apply { put("l", it[0]); put("t", it[1]); put("r", it[2]); put("b", it[3]) } } ?: JSONObject.NULL)
+        put("offR", offRight ?: JSONObject.NULL)
+        put("offT", offTop ?: JSONObject.NULL)
         put("hits", hits)
         put("approved", approved)
         put("createdAt", createdAt)
@@ -106,6 +127,7 @@ data class Rule(
     /** 判定为"危险范式"：无任何可定位信息（仅 className/空），匹配时会泛滥命中整类控件 */
     fun isDangerousPattern(): Boolean {
         if (!bounds.isNullOrEmpty()) return false // 有坐标定位就不算危险
+        if (offRight != null && offTop != null) return false // 相对横幅偏移+全宽锚点也是有效定位
         if (!parentDesc.isNullOrBlank() || childIndex != null) return false // 结构锚定也是有效定位
         return contentDescription.isNullOrBlank() && text.isNullOrBlank() && viewId.isNullOrBlank()
     }
@@ -125,9 +147,11 @@ data class Rule(
         if (!className.isNullOrBlank()) score += 8
         if (!ancestorViewId.isNullOrBlank()) score += 15 // 祖先容器约束是强的去歧义信号
         if (!parentDesc.isNullOrBlank()) score += 30 // 结构锚定（父容器描述）是强定位
+        if (parentAnyDesc == true) score += 25 // 父容器"任意非空desc"语义识别也是强定位（动态歌名/标题场景）
         if (!parentClass.isNullOrBlank()) score += 10
         if (childIndex != null) score += 15
         if (!bounds.isNullOrEmpty()) score += 60 // 显式坐标是强定位，仅次于 viewId
+        if (offRight != null && offTop != null) score += 45 // 相对横幅偏移+全宽锚点是强定位(有 className 全宽约束更稳)
         return score
     }
 
@@ -151,10 +175,13 @@ data class Rule(
             parentClass = if (o.isNull("pClass")) null else o.optString("pClass").takeIf { it.isNotEmpty() },
             childIndex = if (o.isNull("cIdx")) null else o.optInt("cIdx", -1).takeIf { it >= 0 },
             parentMatch = if (o.isNull("pM")) null else o.optInt("pM", 0).takeIf { it in 0..2 },
+            parentAnyDesc = if (o.isNull("pAnyDesc")) null else o.optBoolean("pAnyDesc"),
             bounds = if (o.isNull("bounds")) null else {
                 val bo = o.getJSONObject("bounds")
                 listOf(bo.optInt("l"), bo.optInt("t"), bo.optInt("r"), bo.optInt("b"))
             },
+            offRight = if (o.isNull("offR")) null else o.optInt("offR", -1).takeIf { it >= 0 },
+            offTop = if (o.isNull("offT")) null else o.optInt("offT", -1).takeIf { it >= 0 },
             hits = o.optInt("hits", 0),
             approved = o.optBoolean("approved", true),
             createdAt = o.optLong("createdAt", System.currentTimeMillis()),
@@ -166,5 +193,5 @@ data class Rule(
 
     /** 去重用的指纹键（含 className 与 bounds，避免仅类名/坐标不同的规则被误删） */
     fun fingerprint(): String =
-        "${pkg}|${activity ?: ""}|${viewId ?: ""}|${text ?: ""}|${contentDescription ?: ""}|${className ?: ""}|${ancestorViewId ?: ""}|${parentDesc ?: ""}|${parentClass ?: ""}|${childIndex ?: -1}|${parentMatch ?: -1}|${bounds ?: ""}"
+        "${pkg}|${activity ?: ""}|${viewId ?: ""}|${text ?: ""}|${contentDescription ?: ""}|${className ?: ""}|${ancestorViewId ?: ""}|${parentDesc ?: ""}|${parentClass ?: ""}|${childIndex ?: -1}|${parentMatch ?: -1}|${parentAnyDesc ?: false}|${bounds ?: ""}|offR:${offRight ?: -1}|offT:${offTop ?: -1}"
 }

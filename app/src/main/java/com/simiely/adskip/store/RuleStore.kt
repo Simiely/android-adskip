@@ -57,6 +57,17 @@ class RuleStore(context: Context) {
      */
     fun ensureBuiltInRules() {
         val defaults = listOf(
+            // -------------- 微博 (com.sina.weibo) --------------
+            // 开屏广告右下角"跳过"倒计时按钮。开屏仅存在于 SplashActivity(无广告秒过)，有广告才显示"跳过"。
+            // activity=com.sina.weibo.SplashActivity 把作用域锁死在开屏页，text='跳过' + className=TextView 交叉限定，
+            // 首页信息流/视频的"跳过片头"等其它文案不会命中，避免误触。节点 clickable=false，引擎 resolveClickable
+            // 上溯可点祖先或坐标兜底点击该跳过区域。
+            Rule(
+                text = "跳过", viewId = null, pkg = "com.sina.weibo",
+                activity = "com.sina.weibo.SplashActivity",
+                action = "click", name = "微博开屏广告跳过",
+                className = "android.widget.TextView"
+            ),
             // -------------- 向日葵 (com.oray.sunlogin) --------------
             // 顶部弹窗卡片广告的右上角"折叠/关闭"X。viewId 稳定可点，点击后整张广告卡收起。
             Rule(
@@ -144,6 +155,16 @@ class RuleStore(context: Context) {
                 activity = null, action = "click", name = "波点广告角标关闭",
                 className = "android.widget.ImageView",
                 contentDescription = "广告"
+            ),
+            // 插屏/开屏视频广告全屏层 content-desc="关闭"，关闭按钮 X 常隔一层全屏遮罩 View，
+            // 是其子树内第一个可点 ImageView。结构锚定穿透隔层定位(父desc前缀 + 任意深度第0个可点ImageView)，
+            // 零坐标、抗布局漂移。
+            Rule(
+                text = null, viewId = null, pkg = "cn.wenyu.bodian",
+                activity = null, action = "click", name = "波点广告关闭X-结构",
+                className = "android.widget.ImageView",
+                parentDesc = "关闭",
+                childIndex = 0
             )
         )
         defaults.forEach { addRule(it) }
@@ -152,7 +173,7 @@ class RuleStore(context: Context) {
         // "波点广告贴片关闭X" 分别因过期坐标矩形或过时文案(pDesc=点击广告赚288金币)失效/可能误触。
         // 仅删代码不会清除已持久化的种子，必须从设备本地库一并移除，改由结构锚定/通用角标规则接管。
         getRules()
-            .filter { it.pkg == "cn.wenyu.bodian" && it.name in listOf("波点弹窗关闭X", "波点底部广告关闭", "波点广告关闭小X", "波点广告贴片关闭X") }
+            .filter { it.pkg == "cn.wenyu.bodian" && it.name in listOf("波点弹窗关闭X", "波点底部广告关闭", "波点广告关闭小X", "波点广告贴片关闭X", "波点歌播放促销卡关闭X", "波点会员特惠横幅关闭X") }
             .forEach { removeRule(it.fingerprint()) }
         // 网易云底部引导关闭X 的历史版本曾误加 ancestorViewId=bgContainer 祖先约束，但该容器在无障碍树中
         // 并未暴露(viewId 被系统合并丢失)，导致自动扫描永远命中 0。仅删代码不清库会残留死规则占位，
