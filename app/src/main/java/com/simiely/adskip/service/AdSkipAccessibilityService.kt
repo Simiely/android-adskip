@@ -1,8 +1,10 @@
 package com.simely.adskip.service
 
 import android.accessibilityservice.AccessibilityService
+import android.content.ComponentName
 import android.content.Context
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.graphics.Rect
 import android.os.Handler
 import android.os.Looper
@@ -49,6 +51,10 @@ class AdSkipAccessibilityService : AccessibilityService() {
 
     /** 最近一次 WINDOW_STATE_CHANGED 记录到的 Activity 类名，用于规则的意义作用域 */
     private var currentActivity: String? = null
+
+    /** 按包名记录最近解析到的 Activity 类名：避免前台切换后仍用上一包的 Activity 做约束(跨包脏值导致错配/漏配)。
+     *  key=包名, value=经 PackageManager 校验的真实 Activity 全限定类名(或空)。 */
+    private val currentActivityByPkg = HashMap<String, String>()
     private var lastActionKey = ""
     private var lastActionTime = 0L
     private val deferredScanHandler = Handler(Looper.getMainLooper())
@@ -121,9 +127,16 @@ class AdSkipAccessibilityService : AccessibilityService() {
         if (!s.getMasterEnabled()) return
         // 总开关开启时轮询可能已被 P0 停止：一旦有事件流转，立即重新拉起，保证"回前台无事件"的兜底仍然生效
         if (!pollRunning) startForegroundPoll()
-        // 记录最近的 Activity（窗口切换事件 className 通常是 Activity 类名）
+        // 记录最近的 Activity。注意：WINDOW_STATE_CHANGED 的 event.className 并不总是 Activity 类名，
+        // 澎湃OS等 ROM 在窗口归属变化时可能给的是根视图类名(如 FrameLayout/DecorView)，若照单全收，
+        // currentActivity 会被污染成非 Activity 值，导致带 activity 限定(如 com.sina.weibo.SplashActivity)
+        // 的规则等值匹配永远命中 0。这里借 PackageManager 校验 className 是否为真实 Activity，仅采纳真值。
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            currentActivity = event.className?.toString()?.takeIf { it.isNotBlank() } ?: currentActivity
+            val epkg = event.packageName?.toString()
+            resolveActivityName(epkg, event.className?.toString())?.let {
+                currentActivity = it
+                epkg?.let { p -> if (p != packageName) currentActivityByPkg[p] = it }
+            }
             // 切屏/换界面 = 新的广告上下文，重置每个按钮的"会话点击上限"，让新广告的✕可再次跳过
             clickExecutor?.resetSession()
         }
@@ -141,9 +154,9 @@ class AdSkipAccessibilityService : AccessibilityService() {
             // 页面刚打开时内容常异步渲染，首次扫描往往取不到目标。对每一次"开屏/切屏"都安排一次延迟补扫，
             // 避免"开屏时没点、直到用户动手产生新事件才点"。
             if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED)
-                scheduleDeferredScan(pkg, currentActivity ?: "")
+                scheduleDeferredScan(pkg, activityFor(pkg))
             if (event.eventType in MATCH_EVENT_TYPES)
-                scanAndClick(pkg, currentActivity ?: "")
+                scanAndClick(pkg, activityFor(pkg))
         } finally {
             root?.recycle()
         }
@@ -162,6 +175,25 @@ class AdSkipAccessibilityService : AccessibilityService() {
             try { scanAndClick(pkg, activity) } catch (_: Exception) {}
         }, DEFERRED_SCAN_MS)
     }
+
+    /**
+     * 用 PackageManager 校验 className 是否真的是 package 下可解析的 Activity 类名。
+     * 仅当组件确实存在且为 Activity 时才返回其完整类名；解析失败(非 Activity / 类不存在)返回 null(保留现值)。
+     * 这是根治"activity 参数不稳定"的关键：WINDOW_STATE_CHANGED 事件在部分 ROM 上会把根视图类名
+     * (FrameLayout/DecorView)当作 className 抛出，若不校验直接把 currentActivity 覆写成此类名，
+     * 所有带 activity 限定(如 com.sina.weibo.SplashActivity)的规则等值匹配都会永远命中 0。
+     */
+    private fun resolveActivityName(pkg: String?, className: String?): String? {
+        if (pkg.isNullOrBlank() || className.isNullOrBlank()) return null
+        return try {
+            packageManager.getActivityInfo(ComponentName(pkg, className), 0).name
+        } catch (_: PackageManager.NameNotFoundException) {
+            null
+        }
+    }
+
+    /** 当前包解析到的真实 Activity 类名；未知则为空串(空串=规则不做 activity 限定，兼容无事件场景) */
+    private fun activityFor(pkg: String): String = currentActivityByPkg[pkg] ?: ""
 
     private fun scanAndClick(pkg: String, activity: String) {
         if (pkg.isEmpty()) return
@@ -260,7 +292,7 @@ class AdSkipAccessibilityService : AccessibilityService() {
                     if (now - pendingStartTime > PENDING_DEADLINE_MS) return // 超过 30s 未命中，停止轮询
                     if (now - lastPollScanTime >= PENDING_SCAN_MS) {
                         lastPollScanTime = now
-                        scanAndClick(target, currentActivity ?: "")
+                        scanAndClick(target, activityFor(target))
                     }
                 } else {
                     lastPollSeePkg = null
@@ -342,7 +374,7 @@ class AdSkipAccessibilityService : AccessibilityService() {
         Logger.d("[调试] 手动扫描  前台=$pkg activity=$currentActivity paused=$debugPaused")
         if (debugPaused) { Logger.d("[调试] 已暂停，跳过扫描"); return }
         if (pkg != null && pkg.isNotBlank() && ruleStore?.hasActiveRuleFor(pkg) == true)
-            scanAndClick(pkg, currentActivity ?: "")
+            scanAndClick(pkg, activityFor(pkg))
     }
 
     fun debugSetPaused(paused: Boolean) {

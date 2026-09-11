@@ -68,6 +68,16 @@ class RuleStore(context: Context) {
                 action = "click", name = "微博开屏广告跳过",
                 className = "android.widget.TextView"
             ),
+            // -------------- 小米社区 (com.xiaomi.vipaccount) --------------
+            // 开屏广告右上角"跳过 n秒"按钮。viewId=tv_skip 稳定唯一且 clickable=true，可直接 ACTION_CLICK。
+            // text="跳过 2"带倒计时秒数(2/1)会变，故不锚 text 而锚 viewId。
+            // activity 可留空：tv_skip 仅存在于开屏广告，靠 pkg+viewId 已足够唯一；若想进一步收窄，
+            // 可在 dump-state 确认开屏 Activity 全限定类名后补上(引擎已用 PackageManager 校验 event.className
+            // 是否为真实 Activity，带 activity 限定的规则现在能稳定生效，不会落到根视图 className 上命中 0)。
+            Rule(
+                text = null, viewId = "com.xiaomi.vipaccount:id/tv_skip", pkg = "com.xiaomi.vipaccount",
+                activity = null, action = "click", name = "小米社区开屏广告跳过"
+            ),
             // -------------- 向日葵 (com.oray.sunlogin) --------------
             // 顶部弹窗卡片广告的右上角"折叠/关闭"X。viewId 稳定可点，点击后整张广告卡收起。
             Rule(
