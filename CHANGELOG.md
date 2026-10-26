@@ -3,6 +3,11 @@
 版本号为 `versionName`，`versionCode` 单调递增（当前 59）。
 逐条问题记录见 [`DEVELOPMENT.md`](DEVELOPMENT.md)，更早版本以 `git log` 为准。
 
+## 仓库整理 - 2026-10-26
+
+- 文档：补齐根目录四件套（AGENTS / DEVELOPMENT / CHANGELOG）；`DEV_README.md` 合并进 DEVELOPMENT + AGENTS 后删除；`DEV.md` 保留为实现细节笔记
+- 仓库卫生：移除 10 个历史构建 zip（`apk.zip` / `v60.zip` / `v.zip` 等），克隆体积下降；`adskip-keystore.zip` 暂留，待确认是否为可丢弃的调试密钥
+
 ## [1.0.59] - 2026-09-11
 
 - 修复 activity 参数机制：用 `PackageManager` 校验 `event.className` 是否为真实 Activity，

@@ -373,5 +373,5 @@ adb shell run-as com.simely.adskip cat /data/data/com.simely.adskip/shared_prefs
   但安装后应提示用户自行修改；后续版本可改为首次启动随机生成并落盘
 - **仓库根 `adskip-keystore.zip` 被 `.gitignore` 特批入库**（`!adskip-keystore.zip`），而仓库是公开的：
   需确认它是否为可丢弃的调试密钥。若含正式签名密钥，应移出仓库并轮换；历史提交仍可检出，需另行处理
-- 仓库根还留有 11 个历史构建 zip（`apk.zip` / `v60.zip` 等），已超出 `.gitignore` 规则范围（早于规则入库），
-  建议清理以免每次克隆都拉几 MB 旧产物
+- 仓库根曾留有 10 个历史构建 zip（`apk.zip` / `v60.zip` 等），已超出 `.gitignore` 规则（早于规则入库），
+  已于 2026-10-26 从仓库移除（历史提交仍可检出），克隆体积随之下降
