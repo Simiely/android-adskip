@@ -2,8 +2,27 @@
 
 > 记录开发过程中遇到的每个关键问题、根因、解决方案，供后续维护和类似项目参考。
 > **原则：一次踩坑，永久记录。**
+> 2026-10-26：合并原 `DEV_README.md`（架构图 + 7 条早期问题 + 调试技巧）后删除；
+> 原 `DEV.md` 的「固化规则维护规范」移入 `AGENTS.md`，其余实现细节仍在 `DEV.md`（按主题的实现笔记，不是问题记录）。
 
 ---
+
+## 〇、目录与分层
+
+```
+store/       KeywordStore / RuleStore / BlockedRuleStore / StatsStore
+service/     AdSkipAccessibilityService(编排) · KeepAliveService(前台保活+悬浮窗)
+             guard/FilterGuard(包名过滤) · matcher/RuleMatcher(5 层匹配)
+             capturer/CaptureManager(手势捕获) · executor/ClickExecutor(点击+冷却+屏蔽)
+model/       Rule / RuleSet
+float/       FloatWindowManager / HighlightOverlay / ClickHintOverlay
+sync/        GitHubSync
+ui/          MainActivity / components(Keyword/Log/Rule/Sync/Filter) / theme
+util/        SecurePrefs / AccessibilityUtil / Logger
+```
+
+数据流：无障碍事件 → `FilterGuard`（黑白名单）→ `RuleMatcher`（5 层匹配）→ `ClickExecutor`（冷却 + 屏蔽）
+→ `StatsStore` / `ActionHistory`；捕获模式由 `CaptureManager` 生成候选规则。
 
 ## 一、架构决策
 
@@ -282,3 +301,77 @@ CI（GitHub Actions）：`./gradlew assembleDebug`，产出在 `app/build/output
 | `fix: Set→MutableSet` | Kotlin 编译类型错误 |
 | `fix: workflow 添加 tags 触发` | CI 自动 Release |
 | `fix: 捕获模式悬浮胶囊拦截触摸` | 捕获模式下胶囊在顶层吃掉触摸，导致永远捕获不到按钮 |
+
+## 十一、早期问题补充（合并自 DEV_README.md）
+
+### 11.1 屏蔽规则完全无效（最严重）
+
+**TL;DR**：屏蔽表与规则表共用同一个加密 SP 文件，Service 与 Activity 看到的状态不一致。
+
+- 问题：日志里点了「屏蔽」，按钮仍然被点击
+- 根因：`BlockedRuleStore` 与 Keyword/Rule 共用 `adskip_rules`；`ensureSystemBlocked()` 负责写系统包，而 `getAll()` 在文件不存在时返回空；加密层还有写入竞态
+- 解决：屏蔽表改用独立**明文**文件 `adskip_blocked`；`getAll()` 每次读取时合并系统默认包；文字匹配从精确 `==` 改为 `contains`
+- 预防：不同数据不要共用同一个 EncryptedSharedPreferences 文件
+
+### 11.2 包级通配误拦截整个 App
+
+- 问题：京东「限时一元甜筒」等无关按钮也被屏蔽
+- 根因：无文字按钮用 `log.text.ifEmpty { log.app }` 把包名当文字存；`isBlocked` 里存在「文字 == 包名」的包级通配
+- 解决：删掉 `isBlocked` 的包级通配（系统包已在 `FilterGuard` 硬编码拦截）；屏蔽时不再用包名代填空文字
+- 预防：通配规则必须限定作用域，不要用「相等」隐式表达「整个包」
+
+### 11.3 安装 APK 后新代码不生效
+
+- 问题：装完新包，日志里 `tryClick` 根本没被调用
+- 根因：安装只重启 Activity，`AccessibilityService` 进程不受影响，还在跑旧代码
+- 解决：每次安装后到「设置 → 无障碍」先关再开
+- 预防：调试流程固定加这一步，不要先怀疑代码没编进去
+
+### 11.4 自动捕获宽泛 className 规则
+
+- 问题：「分类」「限时一元甜筒」等无关按钮被误点
+- 根因：`hasIdentity` 把 `className` 也算作身份，而它常是 `android.widget.TextView` 这种通用类
+- 解决：`hasIdentity` 只看 `text` / `viewId` / `contentDescription`
+- 预防：身份判据只用「能区分具体控件」的字段
+
+### 11.5 白名单模式不自动收集 App
+
+- 问题：切到白名单模式后名单始终为空
+- 根因：`autoAddFilterPkg` 内部先判 `isFilterEnabled()`，默认关闭时直接返回
+- 解决：去掉该判断——收集名单与是否启用过滤是两件独立的事
+- 预防：把「采集」与「生效开关」分开
+
+### 11.6 黑白名单数据串扰
+
+- 问题：切换模式时同一 App 同时出现在两个名单
+- 根因：只有一个 `filter_list` 键，两种模式共享
+- 解决：拆成 `filter_blacklist` / `filter_whitelist` 两个独立集合
+- 预防：互斥集合用不同键，别靠模式标记复用
+
+### 11.7 悬浮窗状态不同步
+
+- 问题：重启服务后浮窗总出现，不跟随此前的隐藏设置
+- 根因：`KeepAliveService.onCreate()` 无条件 `showCapsule()`
+- 解决：先读 `SecurePrefs.isCapsuleEnabled()` 再决定是否显示
+- 预防：UI 状态要有单一持久化来源
+
+## 十二、调试技巧
+
+```bash
+adb logcat -s BLOCK_DBG                       # 屏蔽检查日志（Service 进程内）
+adb shell run-as com.simely.adskip cat /data/data/com.simely.adskip/shared_prefs/adskip_blocked.xml
+adb shell run-as com.simely.adskip cat /data/data/com.simely.adskip/shared_prefs/adskip_stats.xml
+adb shell run-as com.simely.adskip cat /data/data/com.simely.adskip/shared_prefs/adskip_ui.xml
+```
+
+- 文件日志 `files/click_debug.txt` 只在 Service 进程内有效，Activity 读不到
+- `push_rules.ps1` 提供 `trace / hist / fired / pause / resume` 调试命令
+
+## 十三、安全备注
+
+- **`SecurePrefs` 有硬编码默认口令**（原开发手册记为 `12345678` / `123`）：属本地工具的便捷默认，
+  但安装后应提示用户自行修改；后续版本可改为首次启动随机生成并落盘
+- **仓库根 `adskip-keystore.zip` 被 `.gitignore` 特批入库**（`!adskip-keystore.zip`），而仓库是公开的：
+  需确认它是否为可丢弃的调试密钥。若含正式签名密钥，应移出仓库并轮换；历史提交仍可检出，需另行处理
+- 仓库根还留有 11 个历史构建 zip（`apk.zip` / `v60.zip` 等），已超出 `.gitignore` 规则范围（早于规则入库），
+  建议清理以免每次克隆都拉几 MB 旧产物

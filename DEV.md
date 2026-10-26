@@ -1,5 +1,8 @@
 # AdSkip 开发笔记
 
+> 定位：按主题的实现细节笔记（捕获机制、保活、节点回收、匹配、学习引擎等）。
+> **问题与根因记录**看 [DEVELOPMENT.md](DEVELOPMENT.md)；**关键坑与约定**看 [AGENTS.md](AGENTS.md)。
+
 ## 固化规则维护规范
 
 固化在源码里的规则（`RuleStore.ensureBuiltInRules()` 的点击规则 + `BlockedRuleStore` 的内置硬屏蔽）遵循以下约定：

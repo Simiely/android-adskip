@@ -83,3 +83,12 @@
 | 应用 | 屏蔽目标 | 备注 |
 |------|----------|------|
 | 向日葵 | `viewId = com.oray.sunlogin:id/fl_screen_projection_status` | "投屏给他人"**功能卡**（非广告），点击会弹授权/功能窗；因与横幅广告同框且可点，被误判为可关闭目标。**常驻屏蔽、清空也无法移除**。不影响同包其他关闭规则 |
+
+## 文档
+
+| 文档 | 说明 |
+|------|------|
+| [AGENTS.md](AGENTS.md) | 技术栈、关键坑、固化规则维护约定（改代码前先读） |
+| [DEVELOPMENT.md](DEVELOPMENT.md) | 目录与分层、架构决策、30 条问题记录、调试技巧、安全备注 |
+| [DEV.md](DEV.md) | 实现细节笔记（捕获机制 / 保活 / 节点回收 / 匹配 / 学习引擎） |
+| [CHANGELOG.md](CHANGELOG.md) | 版本变更（versionCode 59 / versionName 1.0.59） |
