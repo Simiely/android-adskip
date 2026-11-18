@@ -47,7 +47,7 @@ LINK_SCHEMES = ("http://", "https://", "mailto:", "tel:", "javascript:", "data:"
 ADR_RE = re.compile(r"ADR-(\d{4})-[a-z0-9-]+\.md$")
 ID_RE = re.compile(r"^[a-z0-9]+(\.[a-z0-9-]+)+$")
 PITFALL_FIELDS = ("summary", "symptom", "cause", "detect", "avoid", "recover", "applies_to", "severity")
-KIT_VERSION = "2.7.4"
+KIT_VERSION = "2.8.0"
 SPEC_VERSION = "2.1.3"
 
 
@@ -619,6 +619,29 @@ def check_skill_contracts(
     return skill_files, seen_skill_names
 
 
+def resolve_local_link(rel: str, doc_path: Path, root: Path, target: str, skills_cfg: dict) -> Path:
+    """解析本地链接；SKILL.md 额外尝试「安装后布局」。
+
+    默认按文件真实位置解析。若 skills.install_prefix 有值（例如 "skills"），
+    说明技能目录在仓库里比安装后多一层：安装时 skills/<name>/ 被平铺成 <name>/，
+    共享的 scripts/、docs/ 与技能目录同级。此时再按剥掉前缀的位置解析一次，
+    让 ../scripts/... 这类为安装布局写的链接在仓库内也能校验通过；
+    技能目录内部的 references/... 仍然走真实位置。
+    """
+    dest = (doc_path.parent / target).resolve()
+    prefix = str(skills_cfg.get("install_prefix") or "").strip("/")
+    glob = str(skills_cfg.get("glob") or "")
+    if not prefix or not glob:
+        return dest
+    if not rel.startswith(prefix + "/") or not fnmatch.fnmatch(rel, glob):
+        return dest
+    alt = (root / rel[len(prefix) + 1:]).parent
+    alt = (alt / target).resolve()
+    if not dest.exists() and alt.exists():
+        return alt
+    return dest
+
+
 def check_links_and_orphans(
     docs: dict[str, "Doc"],
     pages: dict[str, "Doc"],
@@ -627,6 +650,7 @@ def check_links_and_orphans(
     slugger_mode: str,
     report: "Report",
     inbound: set[str],
+    skills_cfg: dict,
 ) -> None:
     """链接、锚点与孤儿页。`inbound` 由调用方传入并就地累加（关系也会贡献入链）。"""
     # 注意：inbound 不能在函数内重新初始化——relations / pitfalls 已经往里加过入链
@@ -663,7 +687,7 @@ def check_links_and_orphans(
                 if filepart.startswith("/"):
                     dest = (root / filepart.lstrip("/")).resolve()
                 else:
-                    dest = (doc.path.parent / filepart).resolve()
+                    dest = resolve_local_link(rel, doc.path, root, filepart, skills_cfg)
             else:
                 dest = doc.path.resolve()
             if not dest.exists():
@@ -1052,7 +1076,7 @@ def main() -> int:
         for target in fm.get("applies_to") or []:
             if str(target) in by_id:
                 inbound.add(by_id[str(target)])
-    check_links_and_orphans(docs, pages, root, generated, slugger_mode, report, inbound)
+    check_links_and_orphans(docs, pages, root, generated, slugger_mode, report, inbound, skills_cfg)
 
     # ADR：唯一编号 + 索引同步，不要求连续
     adr_dir = root / "docs/decisions"
