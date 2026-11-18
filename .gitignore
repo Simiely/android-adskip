@@ -19,3 +19,6 @@
 !adskip-keystore.zip
 build_log.txt
 build_exit.txt
+
+# agent 本地记忆，不入库
+.workbuddy/
